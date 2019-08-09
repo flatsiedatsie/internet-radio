@@ -174,7 +174,7 @@ class InternetRadioAdapter(Adapter):
             if self.devices['internet-radio'] != None:
                 self.devices['internet-radio'].properties['power'].set_cached_value_and_notify( bool(power) )
         except:
-            print("Error setting status of internet radio device")
+            print("Error setting power state of internet radio device")
 
             
             
@@ -271,11 +271,11 @@ class InternetRadioAdapter(Adapter):
                 media=self.vlc.media_new(url)
                 self.vlc_player.set_media(media)
                 self.vlc_player.play()
-                set_state_on_thing(True)
+                self.set_state_on_thing(True)
             else:
                 self.set_status_on_thing("Not a valid URL")
         except Exception as ex:
-            print("Error installing VLC: " + str(ex))
+            print("Error playing station: " + str(ex))
 
 
 
