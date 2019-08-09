@@ -61,7 +61,7 @@ try:
     #import fuzzywuzzy  # noqa: F401
     #import alsaaudio  # noqa: F401
     #import dateutil # noqa: F401
-    import python-vlc # noqa: F401
+    import vlc # noqa: F401
 except ImportError as ex:
     print("Import error: " + str(ex))
     # If installation failed, exit with 100 to tell the gateway not to restart

@@ -1,5 +1,5 @@
 {
-  "name": "internet_radio",
+  "name": "internet-radio",
   "display_name": "Internet radio",
   "version": "0.0.1",
   "description": "Basic internet radio player",
@@ -12,20 +12,21 @@
     "internet",
     "radio"
   ],
-  "homepage": "https://github.com/flatsiedatsie/internet_radio",
+  "homepage": "https://github.com/flatsiedatsie/internet-radio",
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/flatsiedatsie/internet_radio.git"
+    "url": "https://github.com/flatsiedatsie/internet-radio.git"
   },
   "bugs": {
-    "url": "https://github.com/flatsiedatsie/internet_radio/issues"
+    "url": "https://github.com/flatsiedatsie/internet-radio/issues"
   },
   "files": [
     "LICENSE",
     "SHA256SUMS",
     "bootstrap.py",
     "main.py",
+    "install_vlc.sh",
     "pkg/__init__.py",
     "pkg/internet_radio_adapter.py",
     "requirements.txt",
@@ -41,15 +42,51 @@
     "config": {
       "Radio stations": [
         {
+          "name": "Country",
+          "stream_url":"http://sc3c-sjc.1.fm:7806" 
+        },
+        {
           "name": "Fip",
           "stream_url":"http://direct.fipradio.fr/live/fip-midfi.mp3" 
-        }
+        },
+        {
+          "name": "Groove salad",
+          "stream_url":"http://ice.somafm.com/groovesalad" 
+        },
+        {
+          "name": "Hip Hop",
+          "stream_url":"http://whatradio.macchiatomedia.org:9119/" 
+        },
+        {
+          "name": "House",
+          "stream_url":"http://stream.freak31.com:8322/listen.pls" 
+        },
+        {
+          "name": "Latin",
+          "stream_url":"http://radiolatina.info:7087/" 
+        },
+        {
+          "name": "NPR",
+          "stream_url":"http://www.npr.org/streams/aac/live1_aac.pls" 
+        },
+        {
+          "name": "Rock",
+          "stream_url":"http://sorradio.org:5005/live" 
+        },
+        {
+          "name": "Secret agent",
+          "stream_url":"http://ice.somafm.com/secretagent" 
+        },
+        {
+          "name": "Ten",
+          "stream_url":"http://www.listenlive.eu/streams/netherlands/radio10.m3u" 
+        } 
       ]
     },
     "schema": {
       "type": "object",
       "required": [
-        "Stations"
+        "Radio stations"
       ],
       "properties": {
         "Radio stations": {
