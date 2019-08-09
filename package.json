@@ -1,0 +1,79 @@
+{
+  "name": "internet_radio",
+  "display_name": "Internet radio",
+  "version": "0.0.1",
+  "description": "Basic internet radio player",
+  "author": "Flatsiedatsie",
+  "main": "bootstrap.py",
+  "keywords": [
+    "mozilla",
+    "iot",
+    "adapter",
+    "internet",
+    "radio"
+  ],
+  "homepage": "https://github.com/flatsiedatsie/internet_radio",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flatsiedatsie/internet_radio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/flatsiedatsie/internet_radio/issues"
+  },
+  "files": [
+    "LICENSE",
+    "SHA256SUMS",
+    "bootstrap.py",
+    "main.py",
+    "pkg/__init__.py",
+    "pkg/internet_radio_adapter.py",
+    "requirements.txt",
+    "setup.cfg"
+  ],
+  "moziot": {
+    "api": {
+      "min": 2,
+      "max": 2
+    },
+    "plugin": true,
+    "exec": "python3 {path}/bootstrap.py",
+    "config": {
+      "Radio stations": [
+        {
+          "name": "Fip",
+          "stream_url":"http://direct.fipradio.fr/live/fip-midfi.mp3" 
+        }
+      ]
+    },
+    "schema": {
+      "type": "object",
+      "required": [
+        "Stations"
+      ],
+      "properties": {
+        "Radio stations": {
+          "description": "Radio station names and the URL's of their streams",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "stream_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the radio station as you'd like it to appear in the list."
+              },
+              "stream_url": {
+                "type": "string",
+                "description": "A stream URL."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
