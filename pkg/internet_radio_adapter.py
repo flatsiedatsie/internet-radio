@@ -5,6 +5,7 @@ import os
 from os import path
 import sys
 
+import subprocess
 
 sys.path.append(path.join(path.dirname(path.abspath(__file__)), 'lib'))
 
@@ -14,10 +15,12 @@ import time
 
 try:
     import vlc
-    print("VLC was present")
+    if self.DEBUG:
+        print("VLC was present")
 except:
-    print("VLC not installed yet.")
-#print('Python:', sys.version)
+    print("python-vlc dependency not installed yet. Try 'pip3 install python-vlc'")
+
+    #print('Python:', sys.version)
 #print('requests:', requests.__version__)
 
 from gateway_addon import Database, Adapter, Device, Property
@@ -46,81 +49,85 @@ class InternetRadioAdapter(Adapter):
         
         verbose -- whether or not to enable verbose logging
         """
-        print("initialising adapter from class")
+        
+        #print("initialising adapter from class")
         self.pairing = False
         self.DEBUG = True
         self.name = self.__class__.__name__
-        Adapter.__init__(self, 'internet-radio-adapter', 'internet_radio', verbose=verbose)
-        #print("Adapter ID = " + self.get_id())
+        Adapter.__init__(self, 'internet-radio-adapter', 'internet-radio', verbose=verbose)
 
-        for path in _CONFIG_PATHS:
-            if os.path.isdir(path):
-                self.persistence_file_path = os.path.join(
-                    path,
-                    'internet-radio-persistence.json'
-                )
-                print("self.persistence_file_path is now: " + str(self.persistence_file_path))
+        self.addon_path =  os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', 'internet-radio')
 
-        print("Current working directory: " + str(os.getcwd()))
-        
-        try:
-            with open(self.persistence_file_path) as f:
-                self.persistent_data = json.load(f)
-                print("Persistence data was loaded succesfully")
-        except:
-            print("Could not load persistent data (if you just installed the add-on then this is normal)")
-            self.persistent_data = {}
-
-        self.addon_path =  os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', 'internet_radio')
-        
-        try:
-            self.devices['internet_radio'].connected = False
-            self.devices['internet_radio'].connected_notify(False)
-            if self.install_vlc():
-                self.devices['internet_radio'].connected = True
-                self.devices['internet_radio'].connected_notify(True)
-        except Exception as ex:
-            print("Error installing VLC: " + str(ex))
-            
-        try:
-            internet_radio_device = InternetRadioDevice(self)
-            self.handle_device_added(internet_radio_device)
-            print("internet_radio_device created")
-        except Exception as ex:
-            print("Could not create internet_radio_device: " + str(ex))
         
         # LOAD CONFIG
         
-        self.radio_stations = None
+        self.radio_stations = []
+        self.radio_stations_names_list = []
         
         try:
             self.add_from_config()
+        
         except Exception as ex:
             print("Error loading config: " + str(ex))
         
-        
+        # Create list of radio station names for the radio thing.
+        for station in self.radio_stations:
+            if self.DEBUG:
+                print("station: " + str(station))
+            print("adding station: " + str(station['name']))
+            self.radio_stations_names_list.append(str(station['name']))
+
         
         try:
-            
-            self.vlc = vlc.Instance('--input-repeat=-1')
+            internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list)
+            self.handle_device_added(internet_radio_device)
+            print("internet_radio_device created")
+            self.devices['internet-radio'].connected = False
+            self.devices['internet-radio'].connected_notify(False)
+        
+        except Exception as ex:
+            print("Could not create internet_radio_device: " + str(ex))
+        
 
-            #Define VLC player
+        # Check if VLC is installed
+        try:
+            if self.install_vlc():
+                self.devices['internet-radio'].connected = True
+                self.devices['internet-radio'].connected_notify(True)
+        
+        except Exception as ex:
+            print("Error installing VLC: " + str(ex))
+            
+
+        # Create VLC instance
+        try:
+            self.vlc = vlc.Instance('--input-repeat=-1')
             self.vlc_player=self.vlc.media_player_new()
             
         except Exception as ex:
             print("Error starting VLC object: " + str(ex))
             self.set_status_on_thing("Error starting VLC")
-        
-        # Should there be something blocking here?
 
+        # Load a default radio station
+        try:
+            url = ""
+            if len(self.radio_stations) > 0:
+                url = self.radio_stations[0]['stream_url']
+                if url.startswith('http'):
+                    media=self.vlc.media_new(url)
+                    self.vlc_player.set_media(media)
+        except Exception as ex:
+            print("Error pre-loading VLC with default radio station:" + str(ex))
         
+        # Start turned off
+        self.set_state_on_thing(False)
 
 
 
     def add_from_config(self):
         """Attempt to add all configured devices."""
         try:
-            database = Database('internet_radio')
+            database = Database('internet-radio')
             if not database.open():
                 print("Could not open settings database")
                 return
@@ -132,80 +139,62 @@ class InternetRadioAdapter(Adapter):
             print("Error! Failed to open settings database.")
         
         if not config:
-            print("Error loading config from database")
             return
         
-        print(str(config))
+        if self.DEBUG:
+            print(str(config))
 
         try:
             store_updated_settings = False
             
             if 'Radio stations' in config:
                 print("-Radio stations was in config")
-                #new_url = str(config['Radio station'])
-                print(str(new_url))
-                if possible_url.startswith("http"):
-                    print("-- Url started with http.")
-                    self.new_stream_url = new_url
-
-                elif possible_url == "Your new assistant has succesfully been installed":
-                    print("Your new radio station was added")
-                else:
-                    print("Cannot use what you provided")
+                self.radio_stations = config['Radio stations']
+                if self.DEBUG:
+                    print("self.radio_stations in config: " + str(self.radio_stations))
+                
         except Exception as ex:
             print("Error loading radio stations: " + str(ex))
-            
-        
-        try:    
-            # Store the settings that were changed by the add-on.
-            if store_updated_settings:
-                print("Storing overridden settings")
-                try:
-                    database = Database('internet_radio')
-                    if not database.open():
-                        print("Could not open settings database")
-                        #return
-                    else:
-                        database.save_config(config)
-                        database.close()
-                        print("Stored overridden preferences into the database")
-                        
-                except:
-                    print("Error! Failed to store overridden settings in database.")
-                
-            if 'Debugging' in config:
-                print("-Debugging was in config")
-                self.DEBUG = bool(config['Debugging'])
-                print("Debugging enabled")
-            else:
-                self.DEBUG = False
-                
-        except:
-            print("Error loading settings")
 
-            
-    def set_status_on_thing(self,status_string):
+
+
+    def set_status_on_thing(self, status_string):
+        print("new status on thing: " + str(status_string))
         try:
-            if self.devices['internet_radio'] != None:
-                self.devices['internet_radio'].properties['status'].set_cached_value_and_notify( str(status_string) )
+            if self.devices['internet-radio'] != None:
+                self.devices['internet-radio'].properties['status'].set_cached_value_and_notify( str(status_string) )
+        except:
+            print("Error setting status of internet radio device")
+            
+            
+            
+    def set_state_on_thing(self, power):
+        print("new state on thing: " + str(power))
+        try:
+            if self.devices['internet-radio'] != None:
+                self.devices['internet-radio'].properties['power'].set_cached_value_and_notify( bool(power) )
         except:
             print("Error setting status of internet radio device")
 
-
+            
+            
 
     def install_vlc(self):
         """Install VLC using a shell command"""
         try:
-            done = os.path.isfile('/usr/share/vlc')
+            done = os.path.isdir('/usr/share/vlc')
             if done:
-                print("VLC is already installed")
+                if self.DEBUG:
+                    print("VLC is already installed")
                 return True
             
             # Start installing VLC
             else:
+                print("Will try to instal VLC player.")
                 command = str(os.path.join(self.addon_path,"install_vlc.sh"))
                 self.set_status_on_thing("Installing")
-                print("VLC install command: " + str(command))
+                if self.DEBUG:
+                    print("VLC install command: " + str(command))
                 for line in run_command(command):
                     print(str(line))
                     if line.startswith('Command success'):
@@ -218,7 +207,7 @@ class InternetRadioAdapter(Adapter):
                         
         except Exception as ex:
             print("Error installing VLC: " + str(ex))
-            #self.set_status_on_thing("Error during installation")
+            self.set_status_on_thing("Error during installation")
             
         return False
 
@@ -231,19 +220,14 @@ class InternetRadioAdapter(Adapter):
         
         timeout -- Timeout in seconds at which to quit pairing
         """
-        #print()
         if self.DEBUG:
             print("PAIRING INITIATED")
         
         if self.pairing:
-            print("-Already pairing")
+            #print("-Already pairing")
             return
           
         self.pairing = True
-        
-        for item in self.action_times:
-            print("action time: " + str(item))
-        
         return
     
     
@@ -254,53 +238,61 @@ class InternetRadioAdapter(Adapter):
 
 
 
-    def save_persistent_data(self):
-        if self.DEBUG:
-            print("Saving to persistence data store")
+    def unload(self):
+        print("Shutting down Internet Radio. Adios!")
+        self.set_status_on_thing("Disabled")
+        self.set_radio_state(0)
+
+
+
+    def remove_thing(self, device_id):
         try:
-            if not os.path.isfile(self.persistence_file_path):
-                open(self.persistence_file_path, 'a').close()
-                print("Created an empty persistence file")
-
-            with open(self.persistence_file_path) as f:
-                print("saving: " + str(self.persistent_data))
-                json.dump( self.persistent_data, open( self.persistence_file_path, 'w+' ) )
-                print("Persistence data was stored succesfully")
-                return True
-            
-        except Exception as ex:
-            print("Error: could not store data in persistent store: " + str(ex) )
-            return False
-
+            self.set_radio_state(0)
+            obj = self.get_device(device_id)        
+            self.handle_device_removed(obj)                     # Remove from device dictionary
+            if self.DEBUG:
+                print("User removed Internet Radio device")
+        except:
+            print("Could not remove things from devices")
         
+        
+
+
+
     def play_station(self, station_name):
-        print("Play: station name: " + str(station_name))
-        
-        
-    def play_stream(self, url):
-        
-        # update 'currently playing' status? Or is that the dropdown itself?
-        
-        #Define VLC media
-        media=self.vlc.media_new(url)
+        if self.DEBUG:
+            print("Play: station name: " + str(station_name))
+        try:
+            url = ""
+            for station in self.radio_stations:
+                if station['name'] == station_name:
+                    url = station['stream_url']
+            if url.startswith('http'):
+                media=self.vlc.media_new(url)
+                self.vlc_player.set_media(media)
+                self.vlc_player.play()
+                set_state_on_thing(True)
+            else:
+                self.set_status_on_thing("Not a valid URL")
+        except Exception as ex:
+            print("Error installing VLC: " + str(ex))
 
-        #Set player media
-        self.vlc_player.set_media(media)
 
-        #Play the media
-        self.vlc_player.play()
-        
 
     def set_radio_state(self,power):
-        print("power:" + str(power))
         if power:
+            self.set_status_on_thing("Playing")
             self.vlc_player.play()
         else:
+            self.set_status_on_thing("Stopped")
             self.vlc_player.stop()
 
-
-
-from gateway_addon import Device, Property, Notifier, Outlet
+            
+    def set_radio_volume(self,volume):
+        try:
+            self.vlc_player.audio_set_volume(volume)
+        except:
+            print("Could not change VLC player volume")
 
 
 #
@@ -310,16 +302,16 @@ from gateway_addon import Device, Property, Notifier, Outlet
 class InternetRadioDevice(Device):
     """Candle device type."""
 
-    def __init__(self, adapter):
+    def __init__(self, adapter, radio_station_names_list):
         """
         Initialize the object.
         adapter -- the Adapter managing this device
         """
 
-        Device.__init__(self, adapter, 'internet_radio')
+        Device.__init__(self, adapter, 'internet-radio')
         
-        self._id = 'internet_radio'
-        self.id = 'internet_radio'
+        self._id = 'internet-radio'
+        self.id = 'internet-radio'
         self.adapter = adapter
 
         self.name = 'Internet radio'
@@ -327,31 +319,20 @@ class InternetRadioDevice(Device):
         self.description = 'Listen to internet radio stations'
         self._type = ['MultiLevelSwitch']
         self.connected = False
+
+        self.radio_station_names_list = radio_station_names_list
+        
         try:
-            #volume_property = InternetRadioProperty(self,"volume",)
             self.properties["station"] = InternetRadioProperty(
                             self,
                             "station",
                             {
-                                '@type': '',
                                 'label': "Station",
                                 'type': 'string',
-                                'enum': [
-                                  'Fip',
-                                  'Soma',
-                                  'string3',
-                                  'string4',
-                                ],
+                                'enum': radio_station_names_list,
                             },
                             'Fip')
 
-            #{
-            #  name: 'stringEnumProperty',
-            #  value: 'string1',
-            #  metadata: {
-            #    type: 'string',
-            #  },
-            #},
             self.properties["status"] = InternetRadioProperty(
                             self,
                             "status",
@@ -371,11 +352,24 @@ class InternetRadioDevice(Device):
                                 'type': 'boolean'
                             },
                             True)
-
+            
+            self.properties["volume"] = InternetRadioProperty(
+                            self,
+                            "volume",
+                            {
+                                '@type': 'LevelProperty',
+                                'label': "Volume",
+                                'type': 'integer',
+                                'minimum': 0,
+                                'maximum': 100,
+                                'unit':'percent'
+                            },
+                            100)
+            
         except Exception as ex:
             print("error adding properties: " + str(ex))
+            
         print("Internet Radio thing has been created.")
-        #self.adapter.handle_device_added(self)
 
 
 
@@ -396,10 +390,12 @@ class InternetRadioProperty(Property):
         self.value = value
         self.set_cached_value(value)
 
+
+
     def set_value(self, value):
-        print("property: set value: " + str(value))
+        #print("property: set_value called for " + str(self.title))
+        #print("property: set value to: " + str(value))
         try:
-            print("set_value called for " + str(self.title))
             if self.title == 'station':
                 self.device.adapter.play_station(str(value))
                 self.update(value)
@@ -407,14 +403,53 @@ class InternetRadioProperty(Property):
             if self.title == 'power':
                 self.device.adapter.set_radio_state(bool(value))
                 self.update(value)
-                
+
+            if self.title == 'volume':
+                self.device.adapter.set_radio_volume(int(value))
+                self.update(value)
+
         except Exception as ex:
             print("set_value error: " + str(ex))
 
-    def update(self, value):         
-        print("property -> update")
-        
+
+
+    def update(self, value):
+        #print("property -> update")
         if value != self.value:
             self.value = value
             self.set_cached_value(value)
             self.device.notify_property_changed(self)
+
+
+            
+#
+# UTILS
+#
+
+def run_command(command):
+    try:
+        p = subprocess.Popen(command,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            shell=True)
+        # Read stdout from subprocess until the buffer is empty !
+        for bline in iter(p.stdout.readline, b''):
+            line = bline.decode('ASCII') #decodedLine = lines.decode('ISO-8859-1')
+            if line: # Don't print blank lines
+                yield line
+        # This ensures the process has completed, AND sets the 'returncode' attr
+        while p.poll() is None:                                                                                                                                        
+            sleep(.1) #Don't waste CPU-cycles
+        # Empty STDERR buffer
+        err = p.stderr.read()
+        if p.returncode == 0:
+            yield("Command success")
+        else:
+            # The run_command() function is responsible for logging STDERR 
+            #print("len(err) = " + str(len(err)))
+            if len(err) > 1:
+                yield("Error: " + str(err.decode('utf-8')))
+            yield("Command failed")
+            #return False
+    except Exception as ex:
+        print("Error running shell command: " + str(ex))   
