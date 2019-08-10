@@ -15,8 +15,6 @@ import time
 
 try:
     import vlc
-    if self.DEBUG:
-        print("VLC was present")
 except:
     print("python-vlc dependency not installed yet. Try 'pip3 install python-vlc'")
 
@@ -58,7 +56,27 @@ class InternetRadioAdapter(Adapter):
 
         self.addon_path =  os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', 'internet-radio')
 
-        
+
+        # Setup persistence
+        for path in _CONFIG_PATHS:
+            if os.path.isdir(path):
+                self.persistence_file_path = os.path.join(
+                    path,
+                    'internet-radio-persistence.json'
+                )
+                print("self.persistence_file_path is now: " + str(self.persistence_file_path))
+
+        try:
+            with open(self.persistence_file_path) as f:
+                self.persistent_data = json.load(f)
+                if self.DEBUG:
+                    print("Persistence data was loaded succesfully.")
+        except:
+            print("Could not load persistent data (if you just installed the add-on then this is normal)")
+            self.persistent_data = {'power':False,'station':None,'volume':100}
+
+
+
         # LOAD CONFIG
         
         self.radio_stations = []
@@ -88,7 +106,7 @@ class InternetRadioAdapter(Adapter):
         except Exception as ex:
             print("Could not create internet_radio_device: " + str(ex))
         
-
+        
         # Check if VLC is installed
         try:
             if self.install_vlc():
@@ -98,7 +116,7 @@ class InternetRadioAdapter(Adapter):
         except Exception as ex:
             print("Error installing VLC: " + str(ex))
             
-
+            
         # Create VLC instance
         try:
             self.vlc = vlc.Instance('--input-repeat=-1')
@@ -107,20 +125,30 @@ class InternetRadioAdapter(Adapter):
         except Exception as ex:
             print("Error starting VLC object: " + str(ex))
             self.set_status_on_thing("Error starting VLC")
+            
+            
+        # Attempt to set the radio back to the states from the persistence data
 
-        # Load a default radio station
+        # Restore volume
         try:
-            url = ""
-            if len(self.radio_stations) > 0:
-                url = self.radio_stations[0]['stream_url']
-                if url.startswith('http'):
-                    media=self.vlc.media_new(url)
-                    self.vlc_player.set_media(media)
+            self.set_radio_volume(self.persistent_data['volume'])
         except Exception as ex:
-            print("Error pre-loading VLC with default radio station:" + str(ex))
+            print("Could not restore radio station: " + str(ex))
         
-        # Start turned off
-        self.set_state_on_thing(False)
+        # Restore station
+        try:
+            if self.persistent_data['station'] != None:
+                self.set_radio_station(self.persistent_data['station'])
+        except Exception as ex:
+            print("couldn't set the radio station name to what it was before: " + str(ex))
+            
+        # Restore power
+        try:
+            self.set_radio_state(bool(self.persistent_data['power']))
+        except Exception as ex:
+            print("Could not restore radio station: " + str(ex))
+
+
 
 
 
@@ -145,8 +173,6 @@ class InternetRadioAdapter(Adapter):
             print(str(config))
 
         try:
-            store_updated_settings = False
-            
             if 'Radio stations' in config:
                 print("-Radio stations was in config")
                 self.radio_stations = config['Radio stations']
@@ -158,26 +184,115 @@ class InternetRadioAdapter(Adapter):
 
 
 
+#
+# MAIN SETTING OF THE RADIO STATES
+#
+
+    def set_radio_station(self, station_name):
+        if self.DEBUG:
+            print("Setting station set to: " + str(station_name))
+        try:
+            url = ""
+            for station in self.radio_stations:
+                if station['name'] == station_name:
+                    print("station name match")
+                    url = station['stream_url']
+                    if str(station_name) != str(self.persistent_data['station']):
+                        self.persistent_data['station'] = str(station_name)
+                        self.save_persistent_data()
+                    print("setting station name on thing")
+                    self.set_station_on_thing(str(station['name']))
+                  
+            if url.startswith('http'):
+                print("URL starts with http")
+                media=self.vlc.media_new(url)
+                self.vlc_player.set_media(media)
+            else:
+                self.set_status_on_thing("Not a valid URL")
+        except Exception as ex:
+            print("Error playing station: " + str(ex))
+
+
+
+    def set_radio_state(self,power):
+        try:
+            if bool(power) != bool(self.persistent_data['power']):
+                self.persistent_data['power'] = bool(power)
+                self.save_persistent_data()
+                
+            if power:
+                self.set_status_on_thing("Playing")
+                self.vlc_player.play()
+            else:
+                self.set_status_on_thing("Stopped")
+                self.vlc_player.stop()
+            self.set_state_on_thing(bool(power))
+        except Exception as ex:
+            print("Error setting radio state: " + str(ex))
+
+
+    def set_radio_volume(self,volume):
+        if int(volume) != self.persistent_data['volume']:
+            self.persistent_data['volume'] = int(volume)
+            self.save_persistent_data()
+        try:
+            self.vlc_player.audio_set_volume(volume)
+            self.set_volume_on_thing(volume)
+        except:
+            print("Could not change VLC player volume")
+
+
+
+
+#
+# SUPPORT METHODS
+#
+
+
     def set_status_on_thing(self, status_string):
-        print("new status on thing: " + str(status_string))
+        if self.DEBUG:
+            print("new status on thing: " + str(status_string))
         try:
             if self.devices['internet-radio'] != None:
-                self.devices['internet-radio'].properties['status'].set_cached_value_and_notify( str(status_string) )
+                #self.devices['internet-radio'].properties['status'].set_cached_value_and_notify( str(status_string) )
+                self.devices['internet-radio'].properties['status'].update( str(status_string) )
         except:
             print("Error setting status of internet radio device")
-            
-            
-            
+
+
+
     def set_state_on_thing(self, power):
-        print("new state on thing: " + str(power))
+        if self.DEBUG:
+            print("new state on thing: " + str(power))
         try:
             if self.devices['internet-radio'] != None:
-                self.devices['internet-radio'].properties['power'].set_cached_value_and_notify( bool(power) )
-        except:
-            print("Error setting power state of internet radio device")
+                self.devices['internet-radio'].properties['power'].update( bool(power) )
+        except Exception as ex:
+            print("Error setting power state of internet radio device:" + str(ex))
 
-            
-            
+
+
+    def set_station_on_thing(self, station):
+        if self.DEBUG:
+            print("new station on thing: " + str(station))
+        try:
+            if self.devices['internet-radio'] != None:
+                self.devices['internet-radio'].properties['station'].update( str(station) )
+        except Exception as ex:
+            print("Error setting station of internet radio device:" + str(ex))
+
+
+
+    def set_volume_on_thing(self, volume):
+        if self.DEBUG:
+            print("new volume on thing: " + str(volume))
+        try:
+            if self.devices['internet-radio'] != None:
+                self.devices['internet-radio'].properties['volume'].update( int(volume) )
+        except Exception as ex:
+            print("Error setting volume of internet radio device:" + str(ex))
+
+
 
     def install_vlc(self):
         """Install VLC using a shell command"""
@@ -212,7 +327,6 @@ class InternetRadioAdapter(Adapter):
         return False
 
 
- 
 
     def start_pairing(self, timeout):
         """
@@ -254,45 +368,37 @@ class InternetRadioAdapter(Adapter):
                 print("User removed Internet Radio device")
         except:
             print("Could not remove things from devices")
-        
-        
 
 
 
-    def play_station(self, station_name):
+    def save_persistent_data(self):
         if self.DEBUG:
-            print("Play: station name: " + str(station_name))
-        try:
-            url = ""
-            for station in self.radio_stations:
-                if station['name'] == station_name:
-                    url = station['stream_url']
-            if url.startswith('http'):
-                media=self.vlc.media_new(url)
-                self.vlc_player.set_media(media)
-                self.vlc_player.play()
-                self.set_state_on_thing(True)
-            else:
-                self.set_status_on_thing("Not a valid URL")
-        except Exception as ex:
-            print("Error playing station: " + str(ex))
-
-
-
-    def set_radio_state(self,power):
-        if power:
-            self.set_status_on_thing("Playing")
-            self.vlc_player.play()
-        else:
-            self.set_status_on_thing("Stopped")
-            self.vlc_player.stop()
-
+            print("Saving to persistence data store")
             
-    def set_radio_volume(self,volume):
         try:
-            self.vlc_player.audio_set_volume(volume)
-        except:
-            print("Could not change VLC player volume")
+            if not os.path.isfile(self.persistence_file_path):
+                open(self.persistence_file_path, 'a').close()
+                if self.DEBUG:
+                    print("Created an empty persistence file")
+            else:
+                if self.DEBUG:
+                    print("Persistence file existed. Will try to save to it.")
+                    
+            with open(self.persistence_file_path) as f:
+                #if self.DEBUG:
+                #    print("saving: " + str(self.persistent_data))
+                json.dump( self.persistent_data, open( self.persistence_file_path, 'w+' ) )
+                return True
+            #self.previous_persistent_data = self.persistent_data.copy()
+            
+        except Exception as ex:
+            print("Error: could not store data in persistent store: " + str(ex) )
+            return False
+
+
+
+
+
 
 
 #
@@ -314,8 +420,8 @@ class InternetRadioDevice(Device):
         self.id = 'internet-radio'
         self.adapter = adapter
 
-        self.name = 'Internet radio'
-        self.title = 'Internet radio'
+        self.name = 'Radio'
+        self.title = 'Radio'
         self.description = 'Listen to internet radio stations'
         self._type = ['MultiLevelSwitch']
         self.connected = False
@@ -380,8 +486,6 @@ class InternetRadioDevice(Device):
 class InternetRadioProperty(Property):
 
     def __init__(self, device, name, description, value):
-        #print("")
-        #print("Init of property")
         Property.__init__(self, device, name, description)
         self.device = device
         self.name = name
@@ -397,16 +501,17 @@ class InternetRadioProperty(Property):
         #print("property: set value to: " + str(value))
         try:
             if self.title == 'station':
-                self.device.adapter.play_station(str(value))
-                self.update(value)
+                self.device.adapter.set_radio_station(str(value))
+                self.device.adapter.set_radio_state(True) # If the user changes the station, we also play it.
+                #self.update(value)
                 
             if self.title == 'power':
                 self.device.adapter.set_radio_state(bool(value))
-                self.update(value)
+                #self.update(value)
 
             if self.title == 'volume':
                 self.device.adapter.set_radio_volume(int(value))
-                self.update(value)
+                #self.update(value)
 
         except Exception as ex:
             print("set_value error: " + str(ex))
