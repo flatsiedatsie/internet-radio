@@ -14,15 +14,15 @@ mkdir package
 mkdir lib
 
 # Pull down Python dependencies
-pip3 install -r requirements.txt -t lib --no-binary python-vlc --prefix ""
+pip3 install -r requirements.txt -t lib --prefix ""
 
-cp -r pkg lib LICENSE package.json *.py requirements.txt setup.cfg install_vlc.sh package/
+cp -r pkg lib LICENSE package.json *.py requirements.txt setup.cfg package/
 find package -type f -name '*.pyc' -delete
 find package -type d -empty -delete
 
 # Generate checksums
 cd package
-sha256sum *.py pkg/*.py LICENSE install_vlc.sh requirements.txt setup.cfg > SHA256SUMS
+sha256sum *.py pkg/*.py LICENSE requirements.txt setup.cfg > SHA256SUMS
 cd -
 
 # Make the tarball

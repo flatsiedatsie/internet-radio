@@ -5,18 +5,12 @@ import os
 from os import path
 import sys
 
-import subprocess
-
 sys.path.append(path.join(path.dirname(path.abspath(__file__)), 'lib'))
 
 import json
-
 import time
-
-try:
-    import vlc
-except:
-    print("python-vlc dependency not installed yet. Try 'pip3 install python-vlc'")
+import subprocess
+import requests
 
     #print('Python:', sys.version)
 #print('requests:', requests.__version__)
@@ -79,6 +73,7 @@ class InternetRadioAdapter(Adapter):
 
         # LOAD CONFIG
         
+        self.current_stream_url = None
         self.radio_stations = []
         self.radio_stations_names_list = []
         
@@ -100,34 +95,14 @@ class InternetRadioAdapter(Adapter):
             internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list)
             self.handle_device_added(internet_radio_device)
             print("internet_radio_device created")
-            self.devices['internet-radio'].connected = False
-            self.devices['internet-radio'].connected_notify(False)
+            self.devices['internet-radio'].connected = True
+            self.devices['internet-radio'].connected_notify(True)
         
         except Exception as ex:
             print("Could not create internet_radio_device: " + str(ex))
         
-        
-        # Check if VLC is installed
-        try:
-            if self.install_vlc():
-                self.devices['internet-radio'].connected = True
-                self.devices['internet-radio'].connected_notify(True)
-        
-        except Exception as ex:
-            print("Error installing VLC: " + str(ex))
-            
-            
-        # Create VLC instance
-        try:
-            self.vlc = vlc.Instance('--input-repeat=-1')
-            self.vlc_player=self.vlc.media_player_new()
-            
-        except Exception as ex:
-            print("Error starting VLC object: " + str(ex))
-            self.set_status_on_thing("Error starting VLC")
-            
-            
-        # Attempt to set the radio back to the states from the persistence data
+
+        self.player = None
 
         # Restore volume
         try:
@@ -203,10 +178,15 @@ class InternetRadioAdapter(Adapter):
                     print("setting station name on thing")
                     self.set_station_on_thing(str(station['name']))
                   
-            if url.startswith('http'):
-                print("URL starts with http")
-                media=self.vlc.media_new(url)
-                self.vlc_player.set_media(media)
+            if url.startswith('http') or url.startswith('rtsp'):
+                print("URL starts with http or rtsp")
+                if url.endswith('.m3u') or url.endswith('.pls'):
+                    print("URL ended with .m3u or .pls (is a playlist)")
+                    url = self.scrape_url_from_playlist(url)
+                    print("Extracted URL = " + str(url))
+                
+                
+                self.current_stream_url = url
             else:
                 self.set_status_on_thing("Not a valid URL")
         except Exception as ex:
@@ -222,13 +202,26 @@ class InternetRadioAdapter(Adapter):
                 
             if power:
                 self.set_status_on_thing("Playing")
-                self.vlc_player.play()
+                if self.player != None:
+                    self.player.terminate()
+                my_command = ("ffplay", "-nodisp", "-autoexit", str(self.current_stream_url))
+                self.player = subprocess.Popen(my_command, 
+                                 stdin=subprocess.PIPE, 
+                                 stdout=subprocess.PIPE, 
+                                 stderr=subprocess.PIPE)
             else:
                 self.set_status_on_thing("Stopped")
-                self.vlc_player.stop()
+                if self.player != None:
+                    self.player.terminate()
+                else:
+                    if self.DEBUG:
+                        print("Could not stop the player, it wasn't loaded.")
+            
             self.set_state_on_thing(bool(power))
+        
         except Exception as ex:
             print("Error setting radio state: " + str(ex))
+
 
 
     def set_radio_volume(self,volume):
@@ -236,10 +229,16 @@ class InternetRadioAdapter(Adapter):
             self.persistent_data['volume'] = int(volume)
             self.save_persistent_data()
         try:
-            self.vlc_player.audio_set_volume(volume)
-            self.set_volume_on_thing(volume)
-        except:
-            print("Could not change VLC player volume")
+            # backup method of setting the volume
+            #call(["/usr/bin/amixer", "-q", "sset", "'Master'", str(volume) + "%"])
+            command = "amixer -q sset 'PCM' " + str(volume) + "%"
+            print("Command to change volume: " + str(command))
+            os.system(command)
+            #call(["/usr/bin/amixer", "-q", "sset", "'Master'", str(volume) + "%"])
+            if self.DEBUG:
+                print("New volume has been set")
+        except Exception as ex:
+            print("Error trying to set volume: " + str(ex))
 
 
 
@@ -293,38 +292,24 @@ class InternetRadioAdapter(Adapter):
             print("Error setting volume of internet radio device:" + str(ex))
 
 
+    def scrape_url_from_playlist(self, url):
+        
+        response = requests.get(url)
+        data = response.text
+    
+        for line in data.splitlines():
+            print(str(line))
 
-    def install_vlc(self):
-        """Install VLC using a shell command"""
-        try:
-            done = os.path.isdir('/usr/share/vlc')
-            if done:
-                if self.DEBUG:
-                    print("VLC is already installed")
-                return True
+            if 'http' in line:
+                url_part = line.split("http",1)[1]
+                if url_part != None:
+                    url = "http" + str(url_part)
+                    print("Extracted URL: " + str(url))
+                    break
+        return url
             
-            # Start installing VLC
-            else:
-                print("Will try to instal VLC player.")
-                command = str(os.path.join(self.addon_path,"install_vlc.sh"))
-                self.set_status_on_thing("Installing")
-                if self.DEBUG:
-                    print("VLC install command: " + str(command))
-                for line in run_command(command):
-                    print(str(line))
-                    if line.startswith('Command success'):
-                        print("VLC installation was succesful")
-                        self.set_status_on_thing("Installed")
-                        return True
-                    elif line.startswith('Command failed'):
-                        print("VLC installation failed")
-                        self.set_status_on_thing("Error installing")
-                        
-        except Exception as ex:
-            print("Error installing VLC: " + str(ex))
-            self.set_status_on_thing("Error during installation")
-            
-        return False
+
+
 
 
 
@@ -354,7 +339,7 @@ class InternetRadioAdapter(Adapter):
 
     def unload(self):
         print("Shutting down Internet Radio. Adios!")
-        self.set_status_on_thing("Disabled")
+        self.set_status_on_thing("Bye")
         self.set_radio_state(0)
 
 
@@ -424,7 +409,7 @@ class InternetRadioDevice(Device):
         self.title = 'Radio'
         self.description = 'Listen to internet radio stations'
         self._type = ['MultiLevelSwitch']
-        self.connected = False
+        #self.connected = False
 
         self.radio_station_names_list = radio_station_names_list
         
