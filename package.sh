@@ -14,7 +14,7 @@ mkdir package
 mkdir lib
 
 # Pull down Python dependencies
-pip3 install -r requirements.txt -t lib --prefix ""
+pip3 install -r requirements.txt -t lib --no-binary requests --prefix ""
 
 cp -r pkg lib LICENSE package.json *.py requirements.txt setup.cfg package/
 find package -type f -name '*.pyc' -delete
