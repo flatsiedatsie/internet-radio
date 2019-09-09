@@ -9,7 +9,7 @@ import time
 
 sys.path.append(path.join(path.dirname(path.abspath(__file__)), 'lib'))
 
-from pkg.internet_radio_adapter import InternetRadioAdapter  # noqa
+from pkg.internet_radio import InternetRadioAdapter  # noqa
 
 _API_VERSION = {
     'min': 2,
