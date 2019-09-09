@@ -26,7 +26,7 @@
     "SHA256SUMS",
     "main.py",
     "pkg/__init__.py",
-    "pkg/internet_radio_adapter.py",
+    "pkg/internet_radio.py",
     "requirements.txt",
     "setup.cfg"
   ],
