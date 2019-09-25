@@ -28,7 +28,8 @@
     "pkg/__init__.py",
     "pkg/internet_radio.py",
     "requirements.txt",
-    "setup.cfg"
+    "setup.cfg",
+	"manifest.json"
   ],
   "moziot": {
     "api": {

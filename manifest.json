@@ -1,0 +1,94 @@
+{
+  "author": "Flatsiedatsie",
+  "description": "Basic internet radio player",
+  "gateway_specific_settings": {
+    "webthings": {
+      "exec": "python3 {path}/main.py",
+      "primary_type": "adapter",
+      "strict_max_version": "*",
+      "strict_min_version": "0.10.0"
+    }
+  },
+  "homepage_url": "https://github.com/flatsiedatsie/internet-radio",
+  "id": "internet-radio",
+  "license": "MPL-2.0",
+  "manifest_version": 1,
+  "name": "Internet radio",
+  "options": {
+    "default": {
+      "Radio stations": [
+        {
+          "name": "Country",
+          "stream_url": "http://sc3c-sjc.1.fm:7806"
+        },
+        {
+          "name": "Fip",
+          "stream_url": "http://direct.fipradio.fr/live/fip-midfi.mp3"
+        },
+        {
+          "name": "Groove salad",
+          "stream_url": "http://ice.somafm.com/groovesalad"
+        },
+        {
+          "name": "Hip Hop",
+          "stream_url": "http://whatradio.macchiatomedia.org:9119/"
+        },
+        {
+          "name": "Freak",
+          "stream_url": "http://stream.freak31.com:8322/listen.pls"
+        },
+        {
+          "name": "Latin",
+          "stream_url": "http://radiolatina.info:7087/"
+        },
+        {
+          "name": "NPR",
+          "stream_url": "http://www.npr.org/streams/aac/live1_aac.pls"
+        },
+        {
+          "name": "Rock",
+          "stream_url": "http://sorradio.org:5005/live"
+        },
+        {
+          "name": "Secret agent",
+          "stream_url": "http://ice.somafm.com/secretagent"
+        },
+        {
+          "name": "Ten",
+          "stream_url": "http://www.listenlive.eu/streams/netherlands/radio10.m3u"
+        }
+      ]
+    },
+    "schema": {
+      "properties": {
+        "Radio stations": {
+          "description": "Radio station names and the URL's of their streams",
+          "items": {
+            "properties": {
+              "name": {
+                "description": "Name of the radio station as you'd like it to appear in the list.",
+                "type": "string"
+              },
+              "stream_url": {
+                "description": "A stream URL.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "stream_url"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "Radio stations"
+      ],
+      "type": "object"
+    }
+  },
+  "short_name": "Internet rad",
+  "version": "0.0.4"
+}
