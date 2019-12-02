@@ -40,7 +40,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, cleanup)
 
 
-    _ADAPTER = InternetRadioAdapter(verbose=True)
+    _ADAPTER = InternetRadioAdapter(verbose=False)
     print("-")
     print("started adapter")
     
