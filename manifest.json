@@ -34,7 +34,7 @@
           "stream_url": "http://whatradio.macchiatomedia.org:9119/"
         },
         {
-          "name": "Freak",
+          "name": "House music",
           "stream_url": "http://stream.freak31.com:8322/listen.pls"
         },
         {
@@ -90,5 +90,5 @@
     }
   },
   "short_name": "Internet rad",
-  "version": "0.0.4"
+  "version": "0.0.5"
 }

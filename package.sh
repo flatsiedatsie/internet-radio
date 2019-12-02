@@ -1,8 +1,7 @@
 #!/bin/bash
 
-set -e
+version=$(grep '"version":' manifest.json | cut -d: -f2 | cut -d\" -f2)
 
-version=$(grep version package.json | cut -d: -f2 | cut -d\" -f2)
 
 # Clean up from previous releases
 rm -rf *.tgz package
@@ -16,16 +15,15 @@ mkdir lib
 # Pull down Python dependencies
 pip3 install -r requirements.txt -t lib --no-binary requests --prefix ""
 
-cp -r pkg lib LICENSE package.json *.py requirements.txt setup.cfg package/
+
+cp *.py *.json requirements.txt setup.cfg LICENSE README.md package/
+cp -r lib pkg package/
 find package -type f -name '*.pyc' -delete
 find package -type d -empty -delete
 
-# Generate checksums
 cd package
-sha256sum *.py pkg/*.py LICENSE requirements.txt setup.cfg > SHA256SUMS
-cd -
+find . -type f \! -name SHA256SUMS -exec sha256sum {} \; >> SHA256SUMS
+cd ..
 
-# Make the tarball
 tar czf "internet-radio-${version}.tgz" package
 sha256sum "internet-radio-${version}.tgz"
-#sudo systemctl restart mozilla-iot-gateway.service
