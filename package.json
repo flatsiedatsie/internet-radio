@@ -1,7 +1,7 @@
 {
   "name": "internet-radio",
   "display_name": "Internet radio",
-  "version": "0.0.5",
+  "version": "1.0.0",
   "description": "Basic internet radio player",
   "author": "Flatsiedatsie",
   "main": "main.py",

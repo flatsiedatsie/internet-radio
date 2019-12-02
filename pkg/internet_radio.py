@@ -35,7 +35,7 @@ if 'MOZIOT_HOME' in os.environ:
 class InternetRadioAdapter(Adapter):
     """Adapter for Internet Radio"""
 
-    def __init__(self, verbose=True):
+    def __init__(self, verbose=False):
         """
         Initialize the object.
         
@@ -44,30 +44,27 @@ class InternetRadioAdapter(Adapter):
         
         #print("initialising adapter from class")
         self.pairing = False
+        self.addon_name = 'internet-radio'
         self.DEBUG = True
         self.name = self.__class__.__name__
-        Adapter.__init__(self, 'internet-radio', 'internet-radio', verbose=verbose)
+        Adapter.__init__(self, self.addon_name, self.addon_name, verbose=verbose)
 
-        self.addon_path =  os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', 'internet-radio')
 
 
         # Setup persistence
-        for path in _CONFIG_PATHS:
-            if os.path.isdir(path):
-                self.persistence_file_path = os.path.join(
-                    path,
-                    'internet-radio-persistence.json'
-                )
-                print("self.persistence_file_path is now: " + str(self.persistence_file_path))
+        #for path in _CONFIG_PATHS:
+        #    if os.path.isdir(path):
+        #        self.persistence_file_path = os.path.join(
+        #            path,
+        #            'internet-radio-persistence.json'
+        #        )
+        #        print("self.persistence_file_path is now: " + str(self.persistence_file_path))
 
-        try:
-            with open(self.persistence_file_path) as f:
-                self.persistent_data = json.load(f)
-                if self.DEBUG:
-                    print("Persistence data was loaded succesfully.")
-        except:
-            print("Could not load persistent data (if you just installed the add-on then this is normal)")
-            self.persistent_data = {'power':False,'station':None,'volume':100}
+        self.addon_path =  os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', self.addon_name)
+        self.persistence_file_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'data', self.addon_name,'persistence.json')
+
+
+
 
 
 
@@ -83,18 +80,30 @@ class InternetRadioAdapter(Adapter):
         except Exception as ex:
             print("Error loading config: " + str(ex))
         
+        
         # Create list of radio station names for the radio thing.
         for station in self.radio_stations:
             if self.DEBUG:
-                print("station: " + str(station))
-            print("adding station: " + str(station['name']))
+                print("Adding station: " + str(station))
+                #print("adding station: " + str(station['name']))
             self.radio_stations_names_list.append(str(station['name']))
+
+        
+        try:
+            with open(self.persistence_file_path) as f:
+                self.persistent_data = json.load(f)
+                if self.DEBUG:
+                    print("Persistence data was loaded succesfully.")
+        except:
+            print("Could not load persistent data (if you just installed the add-on then this is normal)")
+            self.persistent_data = {'power':False,'station':self.radio_stations_names_list[0],'volume':100}
 
         
         try:
             internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list)
             self.handle_device_added(internet_radio_device)
-            print("internet_radio_device created")
+            if self.DEBUG:
+                print("internet_radio_device created")
             self.devices['internet-radio'].connected = True
             self.devices['internet-radio'].connected_notify(True)
         
@@ -130,7 +139,7 @@ class InternetRadioAdapter(Adapter):
     def add_from_config(self):
         """Attempt to add all configured devices."""
         try:
-            database = Database('internet-radio')
+            database = Database(self.addon_name)
             if not database.open():
                 print("Could not open settings database")
                 return
@@ -149,10 +158,9 @@ class InternetRadioAdapter(Adapter):
 
         try:
             if 'Radio stations' in config:
-                print("-Radio stations was in config")
                 self.radio_stations = config['Radio stations']
                 if self.DEBUG:
-                    print("self.radio_stations in config: " + str(self.radio_stations))
+                    print("self.radio_stations was in config: " + str(self.radio_stations))
                 
         except Exception as ex:
             print("Error loading radio stations: " + str(ex))
@@ -165,25 +173,28 @@ class InternetRadioAdapter(Adapter):
 
     def set_radio_station(self, station_name):
         if self.DEBUG:
-            print("Setting station set to: " + str(station_name))
+            print("Setting radio station to: " + str(station_name))
         try:
             url = ""
             for station in self.radio_stations:
                 if station['name'] == station_name:
-                    print("station name match")
+                    #print("station name match")
                     url = station['stream_url']
                     if str(station_name) != str(self.persistent_data['station']):
                         self.persistent_data['station'] = str(station_name)
                         self.save_persistent_data()
-                    print("setting station name on thing")
+                    if self.DEBUG:
+                        print("setting station name on thing")
                     self.set_station_on_thing(str(station['name']))
                   
             if url.startswith('http') or url.startswith('rtsp'):
                 print("URL starts with http or rtsp")
                 if url.endswith('.m3u') or url.endswith('.pls'):
-                    print("URL ended with .m3u or .pls (is a playlist)")
+                    if self.DEBUG:
+                        print("URL ended with .m3u or .pls (is a playlist)")
                     url = self.scrape_url_from_playlist(url)
-                    print("Extracted URL = " + str(url))
+                    if self.DEBUG:
+                        print("Extracted URL = " + str(url))
                 
                 
                 self.current_stream_url = url
@@ -195,6 +206,8 @@ class InternetRadioAdapter(Adapter):
 
 
     def set_radio_state(self,power):
+        if self.DEBUG:
+            print("Setting radio power to " + str(power))
         try:
             if bool(power) != bool(self.persistent_data['power']):
                 self.persistent_data['power'] = bool(power)
@@ -225,6 +238,8 @@ class InternetRadioAdapter(Adapter):
 
 
     def set_radio_volume(self,volume):
+        if self.DEBUG:
+            print("Setting radio volume to " + str(volume))
         if int(volume) != self.persistent_data['volume']:
             self.persistent_data['volume'] = int(volume)
             self.save_persistent_data()
@@ -233,7 +248,8 @@ class InternetRadioAdapter(Adapter):
             # backup method of setting the volume
             #call(["/usr/bin/amixer", "-q", "sset", "'Master'", str(volume) + "%"])
             command = "amixer -q sset 'PCM' " + str(volume) + "%"
-            print("Command to change volume: " + str(command))
+            if self.DEBUG:
+                print("Command to change volume: " + str(command))
             os.system(command)
             #call(["/usr/bin/amixer", "-q", "sset", "'Master'", str(volume) + "%"])
             if self.DEBUG:
@@ -299,13 +315,15 @@ class InternetRadioAdapter(Adapter):
         data = response.text
     
         for line in data.splitlines():
-            print(str(line))
+            if self.DEBUG:
+                print(str(line))
 
             if 'http' in line:
                 url_part = line.split("http",1)[1]
                 if url_part != None:
                     url = "http" + str(url_part)
-                    print("Extracted URL: " + str(url))
+                    if self.DEBUG:
+                        print("Extracted URL: " + str(url))
                     break
         return url
             
@@ -339,7 +357,8 @@ class InternetRadioAdapter(Adapter):
 
 
     def unload(self):
-        print("Shutting down Internet Radio. Adios!")
+        if self.DEBUG:
+            print("Shutting down Internet Radio.")
         self.set_status_on_thing("Bye")
         self.set_radio_state(0)
 
@@ -423,7 +442,7 @@ class InternetRadioDevice(Device):
                                 'type': 'string',
                                 'enum': radio_station_names_list,
                             },
-                            'Fip')
+                            self.adapter.persistent_data['station'])
 
             self.properties["status"] = InternetRadioProperty(
                             self,
@@ -443,7 +462,7 @@ class InternetRadioDevice(Device):
                                 'label': "Power",
                                 'type': 'boolean'
                             },
-                            True)
+                            self.adapter.persistent_data['power'])
             
             self.properties["volume"] = InternetRadioProperty(
                             self,
@@ -456,7 +475,7 @@ class InternetRadioDevice(Device):
                                 'maximum': 100,
                                 'unit':'percent'
                             },
-                            100)
+                            self.adapter.persistent_data['volume'])
             
         except Exception as ex:
             print("error adding properties: " + str(ex))
