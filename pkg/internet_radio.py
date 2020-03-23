@@ -1,22 +1,17 @@
 """Internet radio adapter for Mozilla WebThings Gateway."""
 
 
-import os
+from gateway_addon import Database, Adapter, Device, Property
 from os import path
+import json
+import os
+import subprocess
 import sys
+import time
 
 sys.path.append(path.join(path.dirname(path.abspath(__file__)), 'lib'))
 
-import json
-import time
-import subprocess
-import requests
-
-    #print('Python:', sys.version)
-#print('requests:', requests.__version__)
-
-from gateway_addon import Database, Adapter, Device, Property
-
+import requests  # noqa
 
 
 __location__ = os.path.realpath(
@@ -30,18 +25,16 @@ if 'MOZIOT_HOME' in os.environ:
     _CONFIG_PATHS.insert(0, os.path.join(os.environ['MOZIOT_HOME'], 'config'))
 
 
-
-
 class InternetRadioAdapter(Adapter):
     """Adapter for Internet Radio"""
 
     def __init__(self, verbose=False):
         """
         Initialize the object.
-        
+
         verbose -- whether or not to enable verbose logging
         """
-        
+
         #print("initialising adapter from class")
         self.pairing = False
         self.addon_name = 'internet-radio'
@@ -60,7 +53,7 @@ class InternetRadioAdapter(Adapter):
         #        )
         #        print("self.persistence_file_path is now: " + str(self.persistence_file_path))
 
-        self.addon_path =  os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', self.addon_name)
+        self.addon_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', self.addon_name)
         self.persistence_file_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'data', self.addon_name,'persistence.json')
 
 
@@ -69,18 +62,18 @@ class InternetRadioAdapter(Adapter):
 
 
         # LOAD CONFIG
-        
+
         self.current_stream_url = None
         self.radio_stations = []
         self.radio_stations_names_list = []
-        
+
         try:
             self.add_from_config()
-        
+
         except Exception as ex:
             print("Error loading config: " + str(ex))
-        
-        
+
+
         # Create list of radio station names for the radio thing.
         for station in self.radio_stations:
             if self.DEBUG:
@@ -88,7 +81,7 @@ class InternetRadioAdapter(Adapter):
                 #print("adding station: " + str(station['name']))
             self.radio_stations_names_list.append(str(station['name']))
 
-        
+
         try:
             with open(self.persistence_file_path) as f:
                 self.persistent_data = json.load(f)
@@ -98,7 +91,7 @@ class InternetRadioAdapter(Adapter):
             print("Could not load persistent data (if you just installed the add-on then this is normal)")
             self.persistent_data = {'power':False,'station':self.radio_stations_names_list[0],'volume':100}
 
-        
+
         try:
             internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list)
             self.handle_device_added(internet_radio_device)
@@ -106,10 +99,10 @@ class InternetRadioAdapter(Adapter):
                 print("internet_radio_device created")
             self.devices['internet-radio'].connected = True
             self.devices['internet-radio'].connected_notify(True)
-        
+
         except Exception as ex:
             print("Could not create internet_radio_device: " + str(ex))
-        
+
 
         self.player = None
 
@@ -118,14 +111,14 @@ class InternetRadioAdapter(Adapter):
             self.set_radio_volume(self.persistent_data['volume'])
         except Exception as ex:
             print("Could not restore radio station: " + str(ex))
-        
+
         # Restore station
         try:
             if self.persistent_data['station'] != None:
                 self.set_radio_station(self.persistent_data['station'])
         except Exception as ex:
             print("couldn't set the radio station name to what it was before: " + str(ex))
-            
+
         # Restore power
         try:
             self.set_radio_state(bool(self.persistent_data['power']))
@@ -143,16 +136,16 @@ class InternetRadioAdapter(Adapter):
             if not database.open():
                 print("Could not open settings database")
                 return
-            
+
             config = database.load_config()
             database.close()
-            
+
         except:
             print("Error! Failed to open settings database.")
-        
+
         if not config:
             return
-        
+
         if self.DEBUG:
             print(str(config))
 
@@ -161,7 +154,7 @@ class InternetRadioAdapter(Adapter):
                 self.radio_stations = config['Radio stations']
                 if self.DEBUG:
                     print("self.radio_stations was in config: " + str(self.radio_stations))
-                
+
         except Exception as ex:
             print("Error loading radio stations: " + str(ex))
 
@@ -186,7 +179,7 @@ class InternetRadioAdapter(Adapter):
                     if self.DEBUG:
                         print("setting station name on thing")
                     self.set_station_on_thing(str(station['name']))
-                  
+
             if url.startswith('http') or url.startswith('rtsp'):
                 print("URL starts with http or rtsp")
                 if url.endswith('.m3u') or url.endswith('.pls'):
@@ -195,8 +188,8 @@ class InternetRadioAdapter(Adapter):
                     url = self.scrape_url_from_playlist(url)
                     if self.DEBUG:
                         print("Extracted URL = " + str(url))
-                
-                
+
+
                 self.current_stream_url = url
             else:
                 self.set_status_on_thing("Not a valid URL")
@@ -212,15 +205,15 @@ class InternetRadioAdapter(Adapter):
             if bool(power) != bool(self.persistent_data['power']):
                 self.persistent_data['power'] = bool(power)
                 self.save_persistent_data()
-                
+
             if power:
                 self.set_status_on_thing("Playing")
                 if self.player != None:
                     self.player.terminate()
                 my_command = ("ffplay", "-nodisp", "-autoexit", str(self.current_stream_url))
-                self.player = subprocess.Popen(my_command, 
-                                 stdin=subprocess.PIPE, 
-                                 stdout=subprocess.PIPE, 
+                self.player = subprocess.Popen(my_command,
+                                 stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
             else:
                 self.set_status_on_thing("Stopped")
@@ -229,9 +222,9 @@ class InternetRadioAdapter(Adapter):
                 else:
                     if self.DEBUG:
                         print("Could not stop the player, it wasn't loaded.")
-            
+
             self.set_state_on_thing(bool(power))
-        
+
         except Exception as ex:
             print("Error setting radio state: " + str(ex))
 
@@ -243,15 +236,21 @@ class InternetRadioAdapter(Adapter):
         if int(volume) != self.persistent_data['volume']:
             self.persistent_data['volume'] = int(volume)
             self.save_persistent_data()
-            
+
         try:
-            # backup method of setting the volume
-            #call(["/usr/bin/amixer", "-q", "sset", "'Master'", str(volume) + "%"])
-            command = "amixer -q sset 'PCM' " + str(volume) + "%"
+            if sys.platform == 'darwin':
+                command = \
+                    'osascript -e \'set volume output volume {}\''.format(
+                        volume
+                    )
+            else:
+                command = 'amixer -q sset \'PCM\' {}%'.format(volume)
+
             if self.DEBUG:
                 print("Command to change volume: " + str(command))
+
             os.system(command)
-            #call(["/usr/bin/amixer", "-q", "sset", "'Master'", str(volume) + "%"])
+
             if self.DEBUG:
                 print("New volume has been set")
         except Exception as ex:
@@ -310,10 +309,10 @@ class InternetRadioAdapter(Adapter):
 
 
     def scrape_url_from_playlist(self, url):
-        
+
         response = requests.get(url)
         data = response.text
-    
+
         for line in data.splitlines():
             if self.DEBUG:
                 print(str(line))
@@ -326,33 +325,6 @@ class InternetRadioAdapter(Adapter):
                         print("Extracted URL: " + str(url))
                     break
         return url
-            
-
-
-
-
-
-    def start_pairing(self, timeout):
-        """
-        Start the pairing process. This starts when the user presses the + button on the things page.
-        
-        timeout -- Timeout in seconds at which to quit pairing
-        """
-        if self.DEBUG:
-            print("PAIRING INITIATED")
-        
-        if self.pairing:
-            #print("-Already pairing")
-            return
-          
-        self.pairing = True
-        return
-    
-    
-    
-    def cancel_pairing(self):
-        """Cancel the pairing process."""
-        self.pairing = False
 
 
 
@@ -367,7 +339,7 @@ class InternetRadioAdapter(Adapter):
     def remove_thing(self, device_id):
         try:
             self.set_radio_state(0)
-            obj = self.get_device(device_id)        
+            obj = self.get_device(device_id)
             self.handle_device_removed(obj)                     # Remove from device dictionary
             if self.DEBUG:
                 print("User removed Internet Radio device")
@@ -379,7 +351,7 @@ class InternetRadioAdapter(Adapter):
     def save_persistent_data(self):
         if self.DEBUG:
             print("Saving to persistence data store")
-            
+
         try:
             if not os.path.isfile(self.persistence_file_path):
                 open(self.persistence_file_path, 'a').close()
@@ -388,14 +360,14 @@ class InternetRadioAdapter(Adapter):
             else:
                 if self.DEBUG:
                     print("Persistence file existed. Will try to save to it.")
-                    
+
             with open(self.persistence_file_path) as f:
                 #if self.DEBUG:
                 #    print("saving: " + str(self.persistent_data))
                 json.dump( self.persistent_data, open( self.persistence_file_path, 'w+' ) )
                 return True
             #self.previous_persistent_data = self.persistent_data.copy()
-            
+
         except Exception as ex:
             print("Error: could not store data in persistent store: " + str(ex) )
             return False
@@ -420,7 +392,7 @@ class InternetRadioDevice(Device):
         """
 
         Device.__init__(self, adapter, 'internet-radio')
-        
+
         self._id = 'internet-radio'
         self.id = 'internet-radio'
         self.adapter = adapter
@@ -432,7 +404,7 @@ class InternetRadioDevice(Device):
         #self.connected = False
 
         self.radio_station_names_list = radio_station_names_list
-        
+
         try:
             self.properties["station"] = InternetRadioProperty(
                             self,
@@ -458,12 +430,12 @@ class InternetRadioDevice(Device):
                             self,
                             "power",
                             {
-                                '@type':'OnOffProperty',
+                                '@type': 'OnOffProperty',
                                 'label': "Power",
                                 'type': 'boolean'
                             },
                             self.adapter.persistent_data['power'])
-            
+
             self.properties["volume"] = InternetRadioProperty(
                             self,
                             "volume",
@@ -473,13 +445,13 @@ class InternetRadioDevice(Device):
                                 'type': 'integer',
                                 'minimum': 0,
                                 'maximum': 100,
-                                'unit':'percent'
+                                'unit': 'percent'
                             },
                             self.adapter.persistent_data['volume'])
-            
+
         except Exception as ex:
             print("error adding properties: " + str(ex))
-            
+
         print("Internet Radio thing has been created.")
 
 
@@ -509,7 +481,7 @@ class InternetRadioProperty(Property):
                 self.device.adapter.set_radio_station(str(value))
                 self.device.adapter.set_radio_state(True) # If the user changes the station, we also play it.
                 #self.update(value)
-                
+
             if self.title == 'power':
                 self.device.adapter.set_radio_state(bool(value))
                 #self.update(value)
@@ -529,37 +501,3 @@ class InternetRadioProperty(Property):
             self.value = value
             self.set_cached_value(value)
             self.device.notify_property_changed(self)
-
-
-            
-#
-# UTILS
-#
-
-def run_command(command):
-    try:
-        p = subprocess.Popen(command,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            shell=True)
-        # Read stdout from subprocess until the buffer is empty !
-        for bline in iter(p.stdout.readline, b''):
-            line = bline.decode('ASCII') #decodedLine = lines.decode('ISO-8859-1')
-            if line: # Don't print blank lines
-                yield line
-        # This ensures the process has completed, AND sets the 'returncode' attr
-        while p.poll() is None:                                                                                                                                        
-            sleep(.1) #Don't waste CPU-cycles
-        # Empty STDERR buffer
-        err = p.stderr.read()
-        if p.returncode == 0:
-            yield("Command success")
-        else:
-            # The run_command() function is responsible for logging STDERR 
-            #print("len(err) = " + str(len(err)))
-            if len(err) > 1:
-                yield("Error: " + str(err.decode('utf-8')))
-            yield("Command failed")
-            #return False
-    except Exception as ex:
-        print("Error running shell command: " + str(ex))   
