@@ -28,3 +28,4 @@ tar czf ${TARFILE} package
 shasum --algorithm 256 ${TARFILE} > ${TARFILE}.sha256sum
 
 rm -rf SHA256SUMS package
+sha256sum "internet-radio-${version}.tgz"
