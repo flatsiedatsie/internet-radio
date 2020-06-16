@@ -5,16 +5,12 @@ from gateway_addon import Database, Adapter, Device, Property
 from os import path
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 import threading
 import requests  # noqa
-
-try:
-    import alsaaudio
-except:
-    print("ERROR, alsaaudio is not installed. try 'pip3 install alsaaudio'")
 
 
 sys.path.append(path.join(path.dirname(path.abspath(__file__)), 'lib'))
@@ -194,19 +190,12 @@ class InternetRadioAdapter(Adapter):
 
         while self.running:
             
-            # Match the volume on the thing to the actual system volume. Sometimes other add-ons can change it.
-            try:
-                for mixername in alsaaudio.mixers():
-                    if str(mixername) == "Master" or str(mixername) == "PCM":
-                        mixer = alsaaudio.Mixer(mixername)
-                
-                        current_volume = mixer.getvolume()[0]
-                        
-                        # If the audio output volume was changed, but not by this add-on
-                        if self.persistent_data['volume'] != current_volume:
-                            self.persistent_data['volume'] = current_volume
-                            self.save_persistent_data()
-                            self.set_volume_on_thing(current_volume)
+            # If the audio output volume was changed, but not by this add-on
+            current_volume = self.get_radio_volume()
+            if self.persistent_data['volume'] != current_volume:
+                self.persistent_data['volume'] = current_volume
+                self.save_persistent_data()
+                self.set_volume_on_thing(current_volume)
 
             except Exception as ex:
                 if self.DEBUG:
@@ -314,6 +303,42 @@ class InternetRadioAdapter(Adapter):
             print("Error trying to set volume: " + str(ex))
 
         self.set_volume_on_thing(volume)
+
+
+    def get_radio_volume(self):
+        try:
+            if sys.platform == 'darwin':
+                p = subprocess.run('osascript -e \'get volume settings\'', capture_output=True, shell=True)
+                if p.returncode != 0:
+                    print('Error trying to get volume')
+                    return None
+
+                stdout = p.stdout.decode()
+                lines = stdout.splitlines()
+                first = lines[0]
+                m = re.search(r'output volume:(\d+)', first)
+                if m is None:
+                    print('Error trying to get volume')
+                    return None
+
+                return int(m.group(1))
+            else:
+                p = subprocess.run('amixer sget \'PCM\'', capture_output=True, shell=True)
+                if p.returncode != 0:
+                    print('Error trying to get volume')
+                    return None
+
+                stdout = p.stdout.decode()
+                lines = stdout.splitlines()
+                last = lines[-1]
+                m = re.search(r'(\d+)%', last)
+                if m is None:
+                    print('Error trying to get volume')
+                    return None
+
+                return int(m.group(1))
+        except Exception as ex:
+            print("Error trying to get volume: " + str(ex))
 
 
 #
