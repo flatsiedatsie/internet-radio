@@ -12,20 +12,27 @@ mkdir lib package
 pip3 install -r requirements.txt -t lib --no-binary requests --prefix ""
 
 # Put package together
-cp -r lib pkg LICENSE manifest.json package.json *.py README.md package/
+cp -r lib pkg LICENSE manifest.json *.py README.md package/
 find package -type f -name '*.pyc' -delete
 find package -type d -empty -delete
 
 # Generate checksums
+#cd package
+#find . -type f \! -name SHA256SUMS -exec shasum --algorithm 256 {} \; >> SHA256SUMS
+#cd -
+
 cd package
-find . -type f \! -name SHA256SUMS -exec shasum --algorithm 256 {} \; >> SHA256SUMS
-cd -
+find . -type f \! -name SHA256SUMS -exec sha256sum {} \; >> SHA256SUMS
+cd ..
 
 # Make the tarball
-TARFILE="internet-radio-${version}.tgz"
-tar czf ${TARFILE} package
+#TARFILE="internet-radio-${version}.tgz"
+#tar czf ${TARFILE} package
 
-shasum --algorithm 256 ${TARFILE} > ${TARFILE}.sha256sum
+#shasum --algorithm 256 ${TARFILE} > ${TARFILE}.sha256sum
 
-rm -rf SHA256SUMS package
+#rm -rf SHA256SUMS package
+#sha256sum "internet-radio-${version}.tgz"
+
+tar czf "internet-radio-${version}.tgz" package
 sha256sum "internet-radio-${version}.tgz"

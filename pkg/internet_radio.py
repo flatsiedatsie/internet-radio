@@ -8,10 +8,17 @@ import os
 import subprocess
 import sys
 import time
+import threading
+import requests  # noqa
+
+try:
+    import alsaaudio
+except:
+    print("ERROR, alsaaudio is not installed. try 'pip3 install alsaaudio'")
+
 
 sys.path.append(path.join(path.dirname(path.abspath(__file__)), 'lib'))
 
-import requests  # noqa
 
 
 __location__ = os.path.realpath(
@@ -56,7 +63,7 @@ class InternetRadioAdapter(Adapter):
         self.addon_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', self.addon_name)
         self.persistence_file_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'data', self.addon_name,'persistence.json')
 
-
+        self.running = True
 
 
 
@@ -126,6 +133,17 @@ class InternetRadioAdapter(Adapter):
             print("Could not restore radio station: " + str(ex))
 
 
+        # Start the internal clock, used to sync the volume.
+        print("Starting the internal clock")
+        try:
+            
+            t = threading.Thread(target=self.clock)
+            t.daemon = True
+            t.start()
+        except:
+            print("Error starting the clock thread")
+        
+
 
 
 
@@ -146,6 +164,12 @@ class InternetRadioAdapter(Adapter):
         if not config:
             return
 
+        if 'Debugging' in config:
+            print("-Debugging was in config")
+            self.DEBUG = bool(config['Debugging'])
+            if self.DEBUG:
+                print("Debugging enabled")
+
         if self.DEBUG:
             print(str(config))
 
@@ -157,6 +181,39 @@ class InternetRadioAdapter(Adapter):
 
         except Exception as ex:
             print("Error loading radio stations: " + str(ex))
+
+
+
+
+#
+# CLOCK
+#
+
+    def clock(self):
+        """ Runs every second and handles the various timers """
+
+        while self.running:
+            
+            # Match the volume on the thing to the actual system volume. Sometimes other add-ons can change it.
+            try:
+                for mixername in alsaaudio.mixers():
+                    if str(mixername) == "Master" or str(mixername) == "PCM":
+                        mixer = alsaaudio.Mixer(mixername)
+                
+                        current_volume = mixer.getvolume()[0]
+                        
+                        # If the audio output volume was changed, but not by this add-on
+                        if self.persistent_data['volume'] != current_volume:
+                            self.persistent_data['volume'] = current_volume
+                            self.save_persistent_data()
+                            self.set_volume_on_thing(current_volume)
+
+            except Exception as ex:
+                if self.DEBUG:
+                    print("Error getting current audio volume: " + str(ex))
+            
+            time.sleep(2)
+
 
 
 
@@ -333,6 +390,7 @@ class InternetRadioAdapter(Adapter):
             print("Shutting down Internet Radio.")
         self.set_status_on_thing("Bye")
         self.set_radio_state(0)
+        self.running = False
 
 
 

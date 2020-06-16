@@ -57,7 +57,8 @@
           "name": "Ten",
           "stream_url": "http://www.listenlive.eu/streams/netherlands/radio10.m3u"
         }
-      ]
+      ],
+      "Debugging": false
     },
     "schema": {
       "properties": {
@@ -81,6 +82,10 @@
             "type": "object"
           },
           "type": "array"
+        },
+        "Debugging": {
+          "type": "boolean",
+          "description": "DEBUGGING. Debugging allows you to diagnose any issues with the add-on. If enabled it will result in a lot more debug data in the internal log (which can be found under settings -> developer -> view internal logs)."
         }
       },
       "required": [
@@ -90,5 +95,5 @@
     }
   },
   "short_name": "Radio",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
