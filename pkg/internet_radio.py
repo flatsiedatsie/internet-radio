@@ -191,11 +191,12 @@ class InternetRadioAdapter(Adapter):
         while self.running:
             
             # If the audio output volume was changed, but not by this add-on
-            current_volume = self.get_radio_volume()
-            if self.persistent_data['volume'] != current_volume:
-                self.persistent_data['volume'] = current_volume
-                self.save_persistent_data()
-                self.set_volume_on_thing(current_volume)
+            try:
+                current_volume = self.get_radio_volume()
+                if self.persistent_data['volume'] != current_volume:
+                    self.persistent_data['volume'] = current_volume
+                    self.save_persistent_data()
+                    self.set_volume_on_thing(current_volume)
 
             except Exception as ex:
                 if self.DEBUG:
