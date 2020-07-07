@@ -57,11 +57,22 @@ class InternetRadioAdapter(Adapter):
         #        print("self.persistence_file_path is now: " + str(self.persistence_file_path))
 
         self.addon_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', self.addon_name)
-        self.persistence_file_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'data', self.addon_name,'persistence.json')
+        #self.persistence_file_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'data', self.addon_name,'persistence.json')
+
+        self.persistence_file_path = os.path.join(self.user_profile['dataDir'], self.addon_name, 'persistence.json')
 
         self.running = True
 
+        self.audio_output_options = []
 
+        # Get audio output options
+        if sys.platform != 'darwin':
+            self.audio_controls = get_audio_controls()
+            print(self.audio_controls)
+            # create list of human readable audio-only output options for Shairport-sync
+            
+            for option in self.audio_controls:
+                self.audio_output_options.append( option['human_device_name'] )
 
 
         # LOAD CONFIG
@@ -85,6 +96,7 @@ class InternetRadioAdapter(Adapter):
             self.radio_stations_names_list.append(str(station['name']))
 
 
+        # Get persistent data
         try:
             with open(self.persistence_file_path) as f:
                 self.persistent_data = json.load(f)
@@ -92,11 +104,12 @@ class InternetRadioAdapter(Adapter):
                     print("Persistence data was loaded succesfully.")
         except:
             print("Could not load persistent data (if you just installed the add-on then this is normal)")
-            self.persistent_data = {'power':False,'station':self.radio_stations_names_list[0],'volume':100}
+            self.persistent_data = {'power':False,'station':self.radio_stations_names_list[0],'volume':100, 'audio_output': str(self.audio_controls[0]['human_device_name']) }
 
 
+        # Create the radio device
         try:
-            internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list)
+            internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list, self.audio_output_options)
             self.handle_device_added(internet_radio_device)
             if self.DEBUG:
                 print("internet_radio_device created")
@@ -110,10 +123,11 @@ class InternetRadioAdapter(Adapter):
         self.player = None
 
         # Restore volume
-        try:
-            self.set_radio_volume(self.persistent_data['volume'])
-        except Exception as ex:
-            print("Could not restore radio station: " + str(ex))
+        #try:
+        #    self.set_audio_volume(self.persistent_data['volume'])
+        #except Exception as ex:
+        #    print("Could not restore radio station: " + str(ex))
+
 
         # Restore station
         try:
@@ -121,6 +135,7 @@ class InternetRadioAdapter(Adapter):
                 self.set_radio_station(self.persistent_data['station'])
         except Exception as ex:
             print("couldn't set the radio station name to what it was before: " + str(ex))
+
 
         # Restore power
         try:
@@ -130,14 +145,13 @@ class InternetRadioAdapter(Adapter):
 
 
         # Start the internal clock, used to sync the volume.
-        print("Starting the internal clock")
-        try:
-            
-            t = threading.Thread(target=self.clock)
-            t.daemon = True
-            t.start()
-        except:
-            print("Error starting the clock thread")
+        #print("Starting the internal clock")
+        #try:
+        #    t = threading.Thread(target=self.clock)
+        #    t.daemon = True
+        #    t.start()
+        #except:
+        #    print("Error starting the clock thread")
         
 
 
@@ -192,11 +206,12 @@ class InternetRadioAdapter(Adapter):
             
             # If the audio output volume was changed, but not by this add-on
             try:
-                current_volume = self.get_radio_volume()
-                if self.persistent_data['volume'] != current_volume:
-                    self.persistent_data['volume'] = current_volume
-                    self.save_persistent_data()
-                    self.set_volume_on_thing(current_volume)
+                current_volume = self.get_audio_volume()
+                if current_volume != None:
+                    if self.persistent_data['volume'] != current_volume:
+                        self.persistent_data['volume'] = current_volume
+                        self.save_persistent_data()
+                        self.set_volume_on_thing(current_volume)
 
             except Exception as ex:
                 if self.DEBUG:
@@ -236,12 +251,16 @@ class InternetRadioAdapter(Adapter):
                     if self.DEBUG:
                         print("Extracted URL = " + str(url))
 
-
                 self.current_stream_url = url
+                
+                # Finally, if the station is changed, also turn on the radio
+                self.set_radio_state(True)
+                
             else:
                 self.set_status_on_thing("Not a valid URL")
         except Exception as ex:
             print("Error playing station: " + str(ex))
+
 
 
 
@@ -257,18 +276,34 @@ class InternetRadioAdapter(Adapter):
                 self.set_status_on_thing("Playing")
                 if self.player != None:
                     self.player.terminate()
-                my_command = ("ffplay", "-nodisp", "-autoexit", str(self.current_stream_url))
-                self.player = subprocess.Popen(my_command,
-                                 stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
+                    
+                    
+                    
+                environment = {}#os.environ.copy()
+                
+                
+                if sys.platform != 'darwin':
+                    for option in self.audio_controls:
+                        if option['human_device_name'] == str(self.persistent_data['audio_output']):
+                            environment["ALSA_CARD"] = str(option['simple_card_name'])
+                            print("environment = " + str(environment))
+                            
+                #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.current_stream_url) + " -volume " + str(self.persistent_data['volume'])
+                my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit", str(self.current_stream_url),"-volume",str(self.persistent_data['volume']))
+
+                self.player = subprocess.Popen(my_command, 
+                                env=environment,
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+                   
             else:
                 self.set_status_on_thing("Stopped")
                 if self.player != None:
                     self.player.terminate()
                 else:
                     if self.DEBUG:
-                        print("Could not stop the player, it wasn't loaded.")
+                        print("Could not stop the player because it wasn't running.")
 
             self.set_state_on_thing(bool(power))
 
@@ -277,36 +312,90 @@ class InternetRadioAdapter(Adapter):
 
 
 
-    def set_radio_volume(self,volume):
+    def set_audio_volume(self,volume):
         if self.DEBUG:
-            print("Setting radio volume to " + str(volume))
+            print("Setting audio output volume to " + str(volume))
         if int(volume) != self.persistent_data['volume']:
             self.persistent_data['volume'] = int(volume)
             self.save_persistent_data()
 
-        try:
-            if sys.platform == 'darwin':
-                command = \
-                    'osascript -e \'set volume output volume {}\''.format(
-                        volume
-                    )
-            else:
-                command = 'amixer -q sset \'PCM\' {}%'.format(volume)
-
-            if self.DEBUG:
-                print("Command to change volume: " + str(command))
-
-            os.system(command)
-
-            if self.DEBUG:
-                print("New volume has been set")
-        except Exception as ex:
-            print("Error trying to set volume: " + str(ex))
-
         self.set_volume_on_thing(volume)
+        self.set_radio_state(True)
 
 
-    def get_radio_volume(self):
+
+        # Not all USB devices can have their volume set via a command, so a solution here is to use the volume control on ffplay itself.
+        # The downside is that this volume will be relative to the current main device volume. 
+        # If the main volume is at 50%, and the radio volume is at 50%, then the actual volume will be 25%.
+        if 1 is 0:
+            try:
+                if sys.platform == 'darwin':
+                    command = 'osascript -e \'set volume output volume {}\''.format(volume)
+                    os.system(command)
+                
+                    if self.DEBUG:
+                        print("New macOS volume has been set")
+                
+                else:
+                    for option in self.audio_controls:
+                        if str(self.persistent_data['audio_output']) == str(option["human_device_name"]):
+                            print("setting linux volume")
+                        
+                            # If there is a 'simple control', use that.
+                            if option["control_name"] != None:
+                            
+                                print("control_name was set: " + str(option["control_name"]))
+                                os.system('amixer sset ' + option["control_name"] + ' unmute')
+                                command = 'amixer -c ' + str(option["card_id"]) + ' -M -q sset \'' + str(option["control_name"])  + '\' {}%'.format(volume)
+                                print(command)
+                                os.system(command)
+                            
+                            
+                            # Otherwise, try using the 'complex control' instead
+                            elif option["control_name"] == None and option["complex_control_id"] != None and option["complex_max"] != None and option["complex_count"] != None:
+                                #os.system('amixer sset ' + option["control_name"] + ' unmute')
+                            
+                                new_volume = int(( int(option["complex_max"]) / 100 ) * int(volume) )
+                            
+                                command = 'sudo amixer -c ' + str(option["card_id"]) + ' cset numid=' + str(option["complex_control_id"]) + ' ' + str(new_volume)
+                            
+                                if int(option["complex_count"]) == 2:
+                                    #command = 'amixer -c ' + str(option["card_id"]) + ' -M -q sset \'' + str(option["control_name"])  + '\' {}%'.format(volume)
+                                    command = command + ',' + str(new_volume)
+                            
+                                print(command)
+                                os.system(command)
+                            
+                                #amixer -c 1 cset numid=6 37,37
+                
+                            if self.DEBUG:
+                                print("New linux audio volume has been set")
+                        
+                    # Pi 4 - headphone
+                    #command = 'amixer -c 0 -M -q sset \'PCM\' {}%'.format(volume)
+                    #os.system(command)
+                
+                    # Pi 3 - headphone
+                    #command = 'amixer -c 1 -M -q sset \'Headphone\' {}%'.format(volume)
+                    #os.system(command)
+                
+                    # Pi 3 - just in case there is a speaker in the display
+                    #command = 'amixer -c 0 -M -q sset \'HDMI\' {}%'.format(volume)
+                    #os.system(command)
+                
+                    # ReSpeaker GPIO board headphone
+                    #command = 'amixer -c 2 -M -q sset \'Headphone\' {}%'.format(volume)
+                    #os.system(command)
+                
+                
+                        
+            except Exception as ex:
+                print("Error trying to set volume: " + str(ex))
+
+
+
+
+    def get_audio_volume(self):
         try:
             if sys.platform == 'darwin':
                 p = subprocess.run('osascript -e \'get volume settings\'', capture_output=True, shell=True)
@@ -323,29 +412,93 @@ class InternetRadioAdapter(Adapter):
                     return None
 
                 return int(m.group(1))
+                
             else:
-                p = subprocess.run('amixer sget \'PCM\'', capture_output=True, shell=True)
-                if p.returncode != 0:
-                    print('Error trying to get volume')
-                    return None
+                #print(self.audio_controls)
+                for option in self.audio_controls:
+                    if str(self.persistent_data['audio_output']) == str(option["human_device_name"]):
+                        print("  here is bingo, about to get current volume via linux amixer command")
+                        
+                        if option["control_name"] != None:
+                            command = 'amixer -c ' + str(option["card_id"]) + ' -M -q sget \'' + str(option["control_name"])  + '\''
+                            print(command)
+                            #'amixer sget \'PCM\''
+                    
+                            try:
+                                p = subprocess.run(command, capture_output=True, shell=True)
+                                if p.returncode != 0:
+                                    print('Error trying to get volume')
+                                    return None
 
-                stdout = p.stdout.decode()
-                lines = stdout.splitlines()
-                last = lines[-1]
-                m = re.search(r'(\d+)%', last)
-                if m is None:
-                    print('Error trying to get volume')
-                    return None
+                                stdout = p.stdout.decode()
+                                if len(stdout) > 0:
+                                    lines = stdout.splitlines()
+                                    last = lines[-1]
+                                    m = re.search(r'(\d+)%', last)
+                                    if m is None:
+                                        print('Error trying to get volume (m is None)')
+                                        return None
 
-                return int(m.group(1))
+                                    return int(m.group(1))
+                                
+                            except Exception as ex:
+                                print("error getting linux audio volume:" + str(ex))
+                            
+                        elif option["complex_control_id"] != None and option["complex_max"] != None:
+                            try:
+                                print("simple control was None - this device does not have simple volume control option. But it does have a complex control.")
+                            
+                                command = 'amixer -c ' + str(option["card_id"]) + ' cget numid=' + str(option["complex_control_id"])
+                                print(command)
+                                info_result = run_command(command) #amixer -c 1 cget numid=
+                                print(str(info_result))
+                                
+                                party = info_result.split(': values=')[1]
+                                print(str(party))
+                                
+                                
+                                value = int(party.split(',')[0])
+                                print("complexly gotten volume: " + str(value))
+                            
+                                volume_percentage = round( value * ( 100 / int(option["complex_max"]) ) )
+                                print("complexly gotten volume percentage: " + str(volume_percentage))
+                                
+                                return volume_percentage
+
+                            
+                            except Exception as ex:
+                                print("Error trying to get complex volume: " + str(ex))
+                            
+                            #for part in info_result_parts:
+                            #    if part.startswith('max='):
+                            #        complex_max = int(part)
+                            #        break
+                            
+                            
+                            
+                          #  numid=1,iface=PCM,name='Playback Channel Map'
+                          #    ; type=INTEGER,access=r----R--,values=2,min=0,max=36,step=0
+                          #    : values=0,0
+                          #    | container
+                          #      | chmap-fixed=FL,FR
+
+                            
+                        else:
+                            print("Not enough info to get current volume")    
+                            
+                            
+                            
+                    #else:
+                return None # if nothing worked, it will end up here.
+                    
         except Exception as ex:
             print("Error trying to get volume: " + str(ex))
+
 
 
 #
 # SUPPORT METHODS
 #
-
 
     def set_status_on_thing(self, status_string):
         if self.DEBUG:
@@ -391,8 +544,50 @@ class InternetRadioAdapter(Adapter):
             print("Error setting volume of internet radio device:" + str(ex))
 
 
-    def scrape_url_from_playlist(self, url):
 
+    # Only called on non-darwin devices
+    def set_audio_output(self, selection):
+        if self.DEBUG:
+            print("Setting audio output selection to: " + str(selection))
+            
+        # Get the latest audio controls
+        self.audio_controls = get_audio_controls()
+        print(self.audio_controls)
+        
+        try:        
+            for option in self.audio_controls:
+                if str(option['human_device_name']) == str(selection):
+                    print("CHANGING INTERNET RADIO AUDIO OUTPUT")
+                    # Set selection in persistence data
+                    self.persistent_data['audio_output'] = str(selection)
+                    print("persistent_data is now: " + str(self.persistent_data))
+                    self.save_persistent_data()
+                    
+                    if self.DEBUG:
+                        print("new selection on thing: " + str(selection))
+                    try:
+                        print("self.devices = " + str(self.devices))
+                        if self.devices['internet-radio'] != None:
+                            self.devices['internet-radio'].properties['audio output'].update( str(selection) )
+                    except Exception as ex:
+                        print("Error setting new audio output selection:" + str(ex))
+        
+                    if self.persistent_data['power']:
+                        print("restarting radio with new audio output")
+                        self.set_radio_state(True)
+                    break
+            
+        except Exception as ex:
+            print("Error in set_audio_output: " + str(ex))
+                
+
+
+
+
+
+
+
+    def scrape_url_from_playlist(self, url):
         response = requests.get(url)
         data = response.text
 
@@ -467,9 +662,9 @@ class InternetRadioAdapter(Adapter):
 #
 
 class InternetRadioDevice(Device):
-    """Candle device type."""
+    """Internet Radio device type."""
 
-    def __init__(self, adapter, radio_station_names_list):
+    def __init__(self, adapter, radio_station_names_list, audio_output_list):
         """
         Initialize the object.
         adapter -- the Adapter managing this device
@@ -533,6 +728,19 @@ class InternetRadioDevice(Device):
                             },
                             self.adapter.persistent_data['volume'])
 
+            if sys.platform != 'darwin':
+                print("adding audio output property with list: " + str(audio_output_list))
+                self.properties["audio output"] = InternetRadioProperty(
+                                self,
+                                "audio output",
+                                {
+                                    'label': "Audio output",
+                                    'type': 'string',
+                                    'enum': audio_output_list,
+                                },
+                                self.adapter.persistent_data['audio_output'])
+
+
         except Exception as ex:
             print("error adding properties: " + str(ex))
 
@@ -571,8 +779,11 @@ class InternetRadioProperty(Property):
                 #self.update(value)
 
             if self.title == 'volume':
-                self.device.adapter.set_radio_volume(int(value))
+                self.device.adapter.set_audio_volume(int(value))
                 #self.update(value)
+
+            if self.title == 'audio output':
+                self.device.adapter.set_audio_output(str(value))
 
         except Exception as ex:
             print("set_value error: " + str(ex))
@@ -585,3 +796,187 @@ class InternetRadioProperty(Property):
             self.value = value
             self.set_cached_value(value)
             self.device.notify_property_changed(self)
+
+
+
+
+
+def get_audio_controls():
+
+    audio_controls = []
+    
+    aplay_result = run_command('aplay -l') 
+    lines = aplay_result.splitlines()
+    device_id = 0
+    previous_card_id = 0
+    for line in lines:
+        if line.startswith( 'card ' ):
+            
+            try:
+                #print(line)
+                line_parts = line.split(',')
+            
+                line_a = line_parts[0]
+                #print(line_a)
+                line_b = line_parts[1]
+                #print(line_b)
+            except:
+                continue
+            
+            card_id = int(line_a[5])
+            #print("card id = " + str(card_id))
+            
+            
+            if card_id != previous_card_id:
+                device_id = 0
+            
+            #print("device id = " + str(device_id))
+            
+            
+            simple_card_name = re.findall(r"\:([^']+)\[", line_a)[0]
+            simple_card_name = str(simple_card_name).strip()
+            
+            #print("simple card name = " + str(simple_card_name))
+            
+            full_card_name   = re.findall(r"\[([^']+)\]", line_a)[0]
+            #print("full card name = " + str(full_card_name))
+            
+            full_device_name = re.findall(r"\[([^']+)\]", line_b)[0]
+            #print("full device name = " + str(full_device_name))
+            
+            human_device_name = str(full_device_name)
+            
+            # Raspberry Pi 4
+            human_device_name = human_device_name.replace("bcm2835 ALSA","Built-in headphone jack")
+            human_device_name = human_device_name.replace("bcm2835 IEC958/HDMI","Built-in video")
+            human_device_name = human_device_name.replace("bcm2835 IEC958/HDMI1","Built-in video two")
+            
+            # Raspberry Pi 3
+            human_device_name = human_device_name.replace("bcm2835 Headphones","Built-in headphone jack")
+            
+            # ReSpeaker dual microphone pi hat
+            human_device_name = human_device_name.replace("bcm2835-i2s-wm8960-hifi wm8960-hifi-0","ReSpeaker headphone jack")
+            #print("human device name = " + human_device_name)
+            
+            
+            control_name = None
+            complex_control_id = None
+            complex_max = None
+            complex_count = None
+            
+            amixer_result = run_command('amixer -c ' + str(card_id) + ' scontrols') 
+            lines = amixer_result.splitlines()
+            print(str(lines))
+            print("amixer lines array length: " + str(len(lines)))
+            if len(lines) > 0:
+                for line in lines:
+                    if "'" in line:
+                        #print("line = " + line)
+                        control_name = re.findall(r"'([^']+)'", line)[0]
+                        #print("control name = " + control_name)
+                        if control_name is not 'mic':
+                            break
+                        else:
+                            continue # in case the first control is 'mic', ignore it.
+                    else:
+                        control_name = None
+            
+            # if there is no 'simple control', then a backup method is to get the normal control options.  
+            else:
+                print("get audio controls: no simple control found, getting complex one instead")
+                #line_counter = 0
+                amixer_result = run_command('amixer -c ' + str(card_id) + ' controls')
+                lines = amixer_result.splitlines()
+                if len(lines) > 0:
+                    for line in lines:
+                        #line_counter += 1
+                        
+                        line = line.lower()
+                        print("line.lower = " + line)
+                        if "playback" in line:
+                            print("playback spotted")
+                            
+                            numid_part = line.split(',')[0]
+                            
+                            if numid_part.startswith("numid="):
+                                numid_part = numid_part[6:]
+                                print("numid_part = " + str(numid_part))
+                            
+                                #complex_max = 36
+                                complex_count = 1 # mono
+                                complex_control_id = int(numid_part)
+                                print("complex_control_id = " + str(complex_control_id))
+                            
+                                info_result = run_command('amixer -c ' + str(card_id) + ' cget numid=' + str(numid_part)) #amixer -c 1 cget numid=
+                            
+                                if 'values=2' in info_result:
+                                    complex_count = 2 # stereo
+                                
+                                info_result_parts = info_result.split(',')
+                                for info_part in info_result_parts:
+                                    if info_part.startswith('max='):
+                                        complex_max = int(info_part[4:])
+                                        #complex_max = int(part)
+                                        #break
+                                        
+                                
+                            
+                            break
+                            
+                else:
+                    print("getting audio volume in complex way failed") 
+                            
+                            
+                
+            
+                
+            if control_name is 'mic':
+                control_name = None
+            
+            audio_controls.append({'card_id':card_id, 
+                                'device_id':device_id, 
+                                'simple_card_name':simple_card_name, 
+                                'full_card_name':str(full_card_name), 
+                                'full_device_name':str(full_device_name), 
+                                'human_device_name':str(human_device_name), 
+                                'control_name':control_name,
+                                'complex_control_id':complex_control_id, 
+                                'complex_count':complex_count, 
+                                'complex_max':complex_max }) # ,'controls':lines
+
+
+            if card_id == previous_card_id:
+                device_id += 1
+            
+            previous_card_id = card_id
+
+    return audio_controls
+
+
+
+def kill_process(target):
+    try:
+        os.system( "sudo killall " + str(target) )
+        print(str(target) + " stopped")
+        return True
+    except:
+        print("Error stopping " + str(target))
+        return False
+
+
+
+def run_command(cmd, timeout_seconds=20):
+    try:
+        
+        p = subprocess.run(cmd, timeout=timeout_seconds, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, universal_newlines=True)
+
+        if p.returncode == 0:
+            return p.stdout # + '\n' + "Command success" #.decode('utf-8')
+            #yield("Command success")
+        else:
+            if p.stderr:
+                return "Error: " + str(p.stderr) # + '\n' + "Command failed"   #.decode('utf-8'))
+
+    except Exception as e:
+        print("Error running command: "  + str(e))
+        
