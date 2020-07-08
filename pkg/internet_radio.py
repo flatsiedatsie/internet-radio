@@ -198,7 +198,7 @@ class InternetRadioAdapter(Adapter):
 #
 # CLOCK
 #
-
+    # This is currently no longer used. The volume is now set by changing the output level of fflplay itself.
     def clock(self):
         """ Runs every second and handles the various timers """
 
@@ -323,7 +323,8 @@ class InternetRadioAdapter(Adapter):
         self.set_radio_state(True)
 
 
-
+        return
+        
         # Not all USB devices can have their volume set via a command, so a solution here is to use the volume control on ffplay itself.
         # The downside is that this volume will be relative to the current main device volume. 
         # If the main volume is at 50%, and the radio volume is at 50%, then the actual volume will be 25%.
