@@ -144,15 +144,6 @@ class InternetRadioAdapter(Adapter):
             print("Could not restore radio station: " + str(ex))
 
 
-        # Start the internal clock, used to sync the volume.
-        #print("Starting the internal clock")
-        #try:
-        #    t = threading.Thread(target=self.clock)
-        #    t.daemon = True
-        #    t.start()
-        #except:
-        #    print("Error starting the clock thread")
-        
 
 
 
@@ -196,33 +187,6 @@ class InternetRadioAdapter(Adapter):
 
 
 #
-# CLOCK
-#
-    # This is currently no longer used. The volume is now set by changing the output level of fflplay itself.
-    def clock(self):
-        """ Runs every second and handles the various timers """
-
-        while self.running:
-            
-            # If the audio output volume was changed, but not by this add-on
-            try:
-                current_volume = self.get_audio_volume()
-                if current_volume != None:
-                    if self.persistent_data['volume'] != current_volume:
-                        self.persistent_data['volume'] = current_volume
-                        self.save_persistent_data()
-                        self.set_volume_on_thing(current_volume)
-
-            except Exception as ex:
-                if self.DEBUG:
-                    print("Error getting current audio volume: " + str(ex))
-            
-            time.sleep(2)
-
-
-
-
-#
 # MAIN SETTING OF THE RADIO STATES
 #
 
@@ -254,7 +218,7 @@ class InternetRadioAdapter(Adapter):
                 self.current_stream_url = url
                 
                 # Finally, if the station is changed, also turn on the radio
-                self.set_radio_state(True)
+                #self.set_radio_state(True)
                 
             else:
                 self.set_status_on_thing("Not a valid URL")
@@ -320,80 +284,9 @@ class InternetRadioAdapter(Adapter):
             self.save_persistent_data()
 
         self.set_volume_on_thing(volume)
-        self.set_radio_state(True)
-
+        self.set_radio_state(self.persistent_data['power'])
 
         return
-        
-        # Not all USB devices can have their volume set via a command, so a solution here is to use the volume control on ffplay itself.
-        # The downside is that this volume will be relative to the current main device volume. 
-        # If the main volume is at 50%, and the radio volume is at 50%, then the actual volume will be 25%.
-        if 1 is 0:
-            try:
-                if sys.platform == 'darwin':
-                    command = 'osascript -e \'set volume output volume {}\''.format(volume)
-                    os.system(command)
-                
-                    if self.DEBUG:
-                        print("New macOS volume has been set")
-                
-                else:
-                    for option in self.audio_controls:
-                        if str(self.persistent_data['audio_output']) == str(option["human_device_name"]):
-                            print("setting linux volume")
-                        
-                            # If there is a 'simple control', use that.
-                            if option["control_name"] != None:
-                            
-                                print("control_name was set: " + str(option["control_name"]))
-                                os.system('amixer sset ' + option["control_name"] + ' unmute')
-                                command = 'amixer -c ' + str(option["card_id"]) + ' -M -q sset \'' + str(option["control_name"])  + '\' {}%'.format(volume)
-                                print(command)
-                                os.system(command)
-                            
-                            
-                            # Otherwise, try using the 'complex control' instead
-                            elif option["control_name"] == None and option["complex_control_id"] != None and option["complex_max"] != None and option["complex_count"] != None:
-                                #os.system('amixer sset ' + option["control_name"] + ' unmute')
-                            
-                                new_volume = int(( int(option["complex_max"]) / 100 ) * int(volume) )
-                            
-                                command = 'sudo amixer -c ' + str(option["card_id"]) + ' cset numid=' + str(option["complex_control_id"]) + ' ' + str(new_volume)
-                            
-                                if int(option["complex_count"]) == 2:
-                                    #command = 'amixer -c ' + str(option["card_id"]) + ' -M -q sset \'' + str(option["control_name"])  + '\' {}%'.format(volume)
-                                    command = command + ',' + str(new_volume)
-                            
-                                print(command)
-                                os.system(command)
-                            
-                                #amixer -c 1 cset numid=6 37,37
-                
-                            if self.DEBUG:
-                                print("New linux audio volume has been set")
-                        
-                    # Pi 4 - headphone
-                    #command = 'amixer -c 0 -M -q sset \'PCM\' {}%'.format(volume)
-                    #os.system(command)
-                
-                    # Pi 3 - headphone
-                    #command = 'amixer -c 1 -M -q sset \'Headphone\' {}%'.format(volume)
-                    #os.system(command)
-                
-                    # Pi 3 - just in case there is a speaker in the display
-                    #command = 'amixer -c 0 -M -q sset \'HDMI\' {}%'.format(volume)
-                    #os.system(command)
-                
-                    # ReSpeaker GPIO board headphone
-                    #command = 'amixer -c 2 -M -q sset \'Headphone\' {}%'.format(volume)
-                    #os.system(command)
-                
-                
-                        
-            except Exception as ex:
-                print("Error trying to set volume: " + str(ex))
-
-
 
 
     def get_audio_volume(self):
@@ -580,11 +473,6 @@ class InternetRadioAdapter(Adapter):
             
         except Exception as ex:
             print("Error in set_audio_output: " + str(ex))
-                
-
-
-
-
 
 
 
