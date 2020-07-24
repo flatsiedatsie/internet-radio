@@ -2,6 +2,8 @@
 *.sha256sum
 *.swp
 *.tgz
-SHA256SUMS
-lib/
-package/
+*~
+.DS_Store
+._*
+/lib/
+/package/
