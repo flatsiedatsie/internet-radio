@@ -13,11 +13,6 @@ cp -r pkg LICENSE package.json manifest.json *.py README.md package/
 find package -type f -name '*.pyc' -delete
 find package -type d -empty -delete
 
-# Generate checksums
-#cd package
-#find . -type f \! -name SHA256SUMS -exec shasum --algorithm 256 {} \; >> SHA256SUMS
-#cd -
-
 cd package
 find . -type f \! -name SHA256SUMS -exec sha256sum {} \; >> SHA256SUMS
 cd ..

@@ -100,12 +100,27 @@ class InternetRadioAdapter(Adapter):
         try:
             with open(self.persistence_file_path) as f:
                 self.persistent_data = json.load(f)
+                
+                try:
+                    if 'audio_output' not in self.persistent_data:
+                        print("audio output was not in persistent data, adding it now.")
+                        if len(self.audio_output_options) > 0:
+                            self.persistent_data['audio_output'] = str(self.audio_controls[0]['human_device_name'])
+                        else:
+                            self.persistent_data['audio_output'] = ""
+                except:
+                    print("Error fixing audio output in persistent data")
+                
                 if self.DEBUG:
                     print("Persistence data was loaded succesfully.")
+                    
+                    
         except:
             print("Could not load persistent data (if you just installed the add-on then this is normal)")
-            self.persistent_data = {'power':False,'station':self.radio_stations_names_list[0],'volume':100, 'audio_output': str(self.audio_controls[0]['human_device_name']) }
-
+            if len(self.audio_output_options) > 0:
+                self.persistent_data = {'power':False,'station':self.radio_stations_names_list[0],'volume':100, 'audio_output': str(self.audio_controls[0]['human_device_name']) }
+            else:
+                self.persistent_data = {'power':False,'station':self.radio_stations_names_list[0],'volume':100, 'audio_output': "" }
 
         # Create the radio device
         try:
