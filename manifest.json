@@ -42,10 +42,6 @@
           "stream_url": "http://radiolatina.info:7087/"
         },
         {
-          "name": "NPR",
-          "stream_url": "http://www.npr.org/streams/aac/live1_aac.pls"
-        },
-        {
           "name": "Rock",
           "stream_url": "http://sorradio.org:5005/live"
         },
