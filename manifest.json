@@ -34,8 +34,8 @@
           "stream_url": "http://whatradio.macchiatomedia.org:9119/"
         },
         {
-          "name": "House music",
-          "stream_url": "http://stream.freak31.com:8322/listen.pls"
+          "name": "Freaky",
+          "stream_url": "https://stream.31media.net/freak31"
         },
         {
           "name": "Latin",
@@ -50,8 +50,12 @@
           "stream_url": "http://ice.somafm.com/secretagent"
         },
         {
+          "name": "Talk",
+          "stream_url": "https://playerservices.streamtheworld.com/api/livestream-redirect/CSPANRADIO.mp3"
+        },
+        {
           "name": "Ten",
-          "stream_url": "http://www.listenlive.eu/streams/netherlands/radio10.m3u"
+          "stream_url": "http://stream.radio10.nl/radio10"
         }
       ],
       "Debugging": false
@@ -91,5 +95,5 @@
     }
   },
   "short_name": "Radio",
-  "version": "1.1.2"
+  "version": "1.1.4"
 }
