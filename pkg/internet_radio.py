@@ -1,5 +1,7 @@
-"""Internet radio adapter for Mozilla WebThings Gateway."""
+"""Internet radio adapter for WebThings Gateway."""
 
+# test command to play radio: 
+# ffplay -nodisp -vn -infbuf -autoexit http://direct.fipradio.fr/live/fip-midfi.mp3 -volume 100
 
 from gateway_addon import Database, Adapter, Device, Property
 from os import path
@@ -21,11 +23,11 @@ __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 _CONFIG_PATHS = [
-    os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'config'),
+    os.path.join(os.path.expanduser('~'), '.webthings', 'config'),
 ]
 
 if 'MOZIOT_HOME' in os.environ:
-    _CONFIG_PATHS.insert(0, os.path.join(os.environ['MOZIOT_HOME'], 'config'))
+    _CONFIG_PATHS.insert(0, self.user_profile['configDir'])
 
 
 class InternetRadioAdapter(Adapter):
@@ -56,7 +58,7 @@ class InternetRadioAdapter(Adapter):
         #        )
         #        print("self.persistence_file_path is now: " + str(self.persistence_file_path))
 
-        self.addon_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'addons', self.addon_name)
+        self.addon_path = os.path.join(self.user_profile['addonsDir'], self.addon_name)
         #self.persistence_file_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'data', self.addon_name,'persistence.json')
 
         self.persistence_file_path = os.path.join(self.user_profile['dataDir'], self.addon_name, 'persistence.json')
@@ -147,7 +149,10 @@ class InternetRadioAdapter(Adapter):
         # Restore station
         try:
             if self.persistent_data['station'] != None:
+                print("Setting radio station to the one found in persistence data: " + str(self.persistent_data['station']))
                 self.set_radio_station(self.persistent_data['station'])
+            else:
+                print("No radio station was set in persistence data")
         except Exception as ex:
             print("couldn't set the radio station name to what it was before: " + str(ex))
 
@@ -215,17 +220,22 @@ class InternetRadioAdapter(Adapter):
                     #print("station name match")
                     url = station['stream_url']
                     if str(station_name) != str(self.persistent_data['station']):
+                        if self.DEBUG:
+                            print("Saving station to persistence data")
                         self.persistent_data['station'] = str(station_name)
                         self.save_persistent_data()
+                        
                     if self.DEBUG:
                         print("setting station name on thing")
+                        
                     self.set_station_on_thing(str(station['name']))
 
             if url.startswith('http') or url.startswith('rtsp'):
-                print("URL starts with http or rtsp")
+                if self.DEBUG:
+                    print("URL starts with http or rtsp")
                 if url.endswith('.m3u') or url.endswith('.pls'):
                     if self.DEBUG:
-                        print("URL ended with .m3u or .pls (is a playlist)")
+                        print("URL ended with .m3u or .pls (is a playlist): " + str(url))
                     url = self.scrape_url_from_playlist(url)
                     if self.DEBUG:
                         print("Extracted URL = " + str(url))
@@ -258,23 +268,32 @@ class InternetRadioAdapter(Adapter):
                     
                     
                     
-                environment = {}#os.environ.copy()
+                environment = os.environ.copy()
                 
                 
                 if sys.platform != 'darwin':
                     for option in self.audio_controls:
+                        print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
                         if option['human_device_name'] == str(self.persistent_data['audio_output']):
                             environment["ALSA_CARD"] = str(option['simple_card_name'])
-                            print("environment = " + str(environment))
+                            if self.DEBUG:
+                                print("environment = " + str(environment))
+                        #else:
+                            #print("environment = " + str(environment))
                             
                 #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.current_stream_url) + " -volume " + str(self.persistent_data['volume'])
                 my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit", str(self.current_stream_url),"-volume",str(self.persistent_data['volume']))
+
+                if self.DEBUG:
+                    print("Internet radio addon will call this subprocess command: " + str(my_command))
 
                 self.player = subprocess.Popen(my_command, 
                                 env=environment,
                                 stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
+                                
+                #print(str(self.player))
                    
             else:
                 self.set_status_on_thing("Stopped")
@@ -494,7 +513,9 @@ class InternetRadioAdapter(Adapter):
     def scrape_url_from_playlist(self, url):
         response = requests.get(url)
         data = response.text
-
+        url = None
+        if self.DEBUG:
+            print("playlist data: " + str(data))
         for line in data.splitlines():
             if self.DEBUG:
                 print(str(line))
@@ -506,6 +527,10 @@ class InternetRadioAdapter(Adapter):
                     if self.DEBUG:
                         print("Extracted URL: " + str(url))
                     break
+                    
+        if url == None:
+            set_status_on_thing("Error with station")
+            
         return url
 
 
@@ -545,9 +570,12 @@ class InternetRadioAdapter(Adapter):
                     print("Persistence file existed. Will try to save to it.")
 
             with open(self.persistence_file_path) as f:
-                #if self.DEBUG:
-                #    print("saving: " + str(self.persistent_data))
-                json.dump( self.persistent_data, open( self.persistence_file_path, 'w+' ) )
+                if self.DEBUG:
+                    print("saving: " + str(self.persistent_data))
+                try:
+                    json.dump( self.persistent_data, open( self.persistence_file_path, 'w+' ) )
+                except Exception as ex:
+                    print("Error saving to persistence file: " + str(ex))
                 return True
             #self.previous_persistent_data = self.persistent_data.copy()
 
