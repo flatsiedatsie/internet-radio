@@ -6,7 +6,7 @@
 
 import os
 import sys
-sys.path.append(path.join(path.dirname(path.abspath(__file__)), 'lib'))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib'))
 import re
 import subprocess
 import sys
