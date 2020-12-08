@@ -3,31 +3,31 @@
 # test command to play radio: 
 # ffplay -nodisp -vn -infbuf -autoexit http://direct.fipradio.fr/live/fip-midfi.mp3 -volume 100
 
-from gateway_addon import Database, Adapter, Device, Property
-from os import path
-import json
+
 import os
+import sys
+sys.path.append(path.join(path.dirname(path.abspath(__file__)), 'lib'))
 import re
 import subprocess
 import sys
+import json
 import time
 import threading
 import requests  # noqa
 
-
-sys.path.append(path.join(path.dirname(path.abspath(__file__)), 'lib'))
-
+from gateway_addon import Database, Adapter, Device, Property
 
 
-__location__ = os.path.realpath(
-    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib'))
+
+_TIMEOUT = 3
 
 _CONFIG_PATHS = [
     os.path.join(os.path.expanduser('~'), '.webthings', 'config'),
 ]
 
-if 'MOZIOT_HOME' in os.environ:
-    _CONFIG_PATHS.insert(0, self.user_profile['configDir'])
+if 'WEBTHINGS_HOME' in os.environ:
+    _CONFIG_PATHS.insert(0, os.path.join(os.environ['WEBTHINGS_HOME'], 'config'))
 
 
 class InternetRadioAdapter(Adapter):
@@ -60,7 +60,6 @@ class InternetRadioAdapter(Adapter):
 
         self.addon_path = os.path.join(self.user_profile['addonsDir'], self.addon_name)
         #self.persistence_file_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'data', self.addon_name,'persistence.json')
-
         self.persistence_file_path = os.path.join(self.user_profile['dataDir'], self.addon_name, 'persistence.json')
 
         self.running = True
