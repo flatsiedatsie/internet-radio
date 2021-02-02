@@ -104,7 +104,8 @@ class InternetRadioAdapter(Adapter):
                 
                 try:
                     if 'audio_output' not in self.persistent_data:
-                        print("audio output was not in persistent data, adding it now.")
+                        if self.DEBUG:
+                            print("audio output was not in persistent data, adding it now.")
                         if len(self.audio_output_options) > 0:
                             self.persistent_data['audio_output'] = str(self.audio_controls[0]['human_device_name'])
                         else:
@@ -148,10 +149,12 @@ class InternetRadioAdapter(Adapter):
         # Restore station
         try:
             if self.persistent_data['station'] != None:
-                print("Setting radio station to the one found in persistence data: " + str(self.persistent_data['station']))
+                if self.DEBUG:
+                    print("Setting radio station to the one found in persistence data: " + str(self.persistent_data['station']))
                 self.set_radio_station(self.persistent_data['station'])
             else:
-                print("No radio station was set in persistence data")
+                if self.DEBUG:
+                    print("No radio station was set in persistence data")
         except Exception as ex:
             print("couldn't set the radio station name to what it was before: " + str(ex))
 
@@ -172,14 +175,14 @@ class InternetRadioAdapter(Adapter):
         try:
             database = Database(self.addon_name)
             if not database.open():
-                print("Could not open settings database")
+                print("Error. Could not open settings database")
                 return
 
             config = database.load_config()
             database.close()
 
         except:
-            print("Error! Failed to open settings database.")
+            print("Error. Failed to open settings database.")
 
         if not config:
             return
@@ -272,7 +275,8 @@ class InternetRadioAdapter(Adapter):
                 
                 if sys.platform != 'darwin':
                     for option in self.audio_controls:
-                        print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
+                        if self.DEBUG:
+                            print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
                         if option['human_device_name'] == str(self.persistent_data['audio_output']):
                             environment["ALSA_CARD"] = str(option['simple_card_name'])
                             if self.DEBUG:
@@ -344,11 +348,13 @@ class InternetRadioAdapter(Adapter):
                 #print(self.audio_controls)
                 for option in self.audio_controls:
                     if str(self.persistent_data['audio_output']) == str(option["human_device_name"]):
-                        print("  here is bingo, about to get current volume via linux amixer command")
+                        if self.DEBUG:
+                            print("  here is bingo, about to get current volume via linux amixer command")
                         
                         if option["control_name"] != None:
                             command = 'amixer -c ' + str(option["card_id"]) + ' -M -q sget \'' + str(option["control_name"])  + '\''
-                            print(command)
+                            if self.DEBUG:
+                                print(command)
                             #'amixer sget \'PCM\''
                     
                             try:
@@ -373,22 +379,28 @@ class InternetRadioAdapter(Adapter):
                             
                         elif option["complex_control_id"] != None and option["complex_max"] != None:
                             try:
-                                print("simple control was None - this device does not have simple volume control option. But it does have a complex control.")
+                                if self.DEBUG:
+                                    print("simple control was None - this device does not have simple volume control option. But it does have a complex control.")
                             
                                 command = 'amixer -c ' + str(option["card_id"]) + ' cget numid=' + str(option["complex_control_id"])
-                                print(command)
+                                if self.DEBUG:
+                                    print(command)
                                 info_result = run_command(command) #amixer -c 1 cget numid=
-                                print(str(info_result))
+                                if self.DEBUG:
+                                    print(str(info_result))
                                 
                                 party = info_result.split(': values=')[1]
-                                print(str(party))
+                                if self.DEBUG:
+                                    print(str(party))
                                 
                                 
                                 value = int(party.split(',')[0])
-                                print("complexly gotten volume: " + str(value))
+                                if self.DEBUG:
+                                    print("complexly gotten volume: " + str(value))
                             
                                 volume_percentage = round( value * ( 100 / int(option["complex_max"]) ) )
-                                print("complexly gotten volume percentage: " + str(volume_percentage))
+                                if self.DEBUG:
+                                    print("complexly gotten volume percentage: " + str(volume_percentage))
                                 
                                 return volume_percentage
 
@@ -479,28 +491,33 @@ class InternetRadioAdapter(Adapter):
             
         # Get the latest audio controls
         self.audio_controls = get_audio_controls()
-        print(self.audio_controls)
+        if self.DEBUG:
+            print(self.audio_controls)
         
         try:        
             for option in self.audio_controls:
                 if str(option['human_device_name']) == str(selection):
-                    print("CHANGING INTERNET RADIO AUDIO OUTPUT")
+                    if self.DEBUG:
+                        print("CHANGING INTERNET RADIO AUDIO OUTPUT")
                     # Set selection in persistence data
                     self.persistent_data['audio_output'] = str(selection)
-                    print("persistent_data is now: " + str(self.persistent_data))
+                    if self.DEBUG:
+                        print("persistent_data is now: " + str(self.persistent_data))
                     self.save_persistent_data()
                     
                     if self.DEBUG:
                         print("new selection on thing: " + str(selection))
                     try:
-                        print("self.devices = " + str(self.devices))
+                        if self.DEBUG:
+                            print("self.devices = " + str(self.devices))
                         if self.devices['internet-radio'] != None:
                             self.devices['internet-radio'].properties['audio output'].update( str(selection) )
                     except Exception as ex:
                         print("Error setting new audio output selection:" + str(ex))
         
                     if self.persistent_data['power']:
-                        print("restarting radio with new audio output")
+                        if self.DEBUG:
+                            print("restarting radio with new audio output")
                         self.set_radio_state(True)
                     break
             
