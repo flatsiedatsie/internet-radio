@@ -20,6 +20,7 @@
 			this.current_time = 0;
             
             this.stations = [];
+            this.station = ""; // name of station that is currently playing (if the user has named the stream)
             
             this.entered_search_page = false;
             this.radio_browser_server = "";
@@ -45,6 +46,12 @@
 	  		  	}
 	        })
 	        .catch((e) => console.error('Failed to fetch content:', e));
+            
+            
+            
+            
+            
+            
 	    }
 
 		
@@ -95,19 +102,56 @@
 			//text_response_container.style.display = 'none';
 			
             
-
+            // Search input enter press
 			document.getElementById('extension-internet-radio-search-field').addEventListener('keyup', (event) => { // onEvent(e)
 			    if (event.keyCode === 13) {
 			        //console.log('Enter pressed');
 					this.send_search();
 			    }
 			});
-
+            
+            // Search input button press
 			document.getElementById('extension-internet-radio-search-button').addEventListener('click', (event) => {
 				//console.log("send button clicked");
 				this.send_search();
 			});
 			
+            
+            // Easter egg: add custom station
+            
+			document.getElementById('extension-internet-radio-title').addEventListener('click', (event) => {
+				//console.log("send button clicked");
+                if(confirm("Would you like to add a custom radio station?")){
+                    const new_url = prompt('Please provide the URL of the stream');
+                    const new_name = prompt('Please give this station a name');
+                    
+                    if(new_name != "" && new_url.startsWith('http')){
+    					// Send new values to backend
+    					window.API.postJson(
+    						`/extensions/${this.id}/api/ajax`,
+    						{'action':'add', 'name':new_name, 'stream_url':new_url}
+    					).then((body) => { 
+    						console.log("add item reaction: ", body);
+                            if(body.state = 'ok'){
+                                alert("The station has been added. Refresh the page to see it.");
+                            }else{
+                                alert("Error: could not add station");
+                            }
+    					}).catch((e) => {
+    						console.log("internet-radio: error in add items handler: ", e);
+    						//pre.innerText = "Could not delete that station";
+                            alert("Error: could not add station");
+    					});
+                    }
+                    else{
+                        alert("That didn't seem right. Make sure the stream starts with http, and that you provided a name");
+                    }
+			
+					
+                }
+				
+			});
+            
 			
             document.getElementById('extension-internet-radio-add-button').addEventListener('click', (event) => {
                 //console.log("add button clicked");
@@ -208,7 +252,12 @@
                         }
                         
                         if(typeof body.now_playing != 'undefined'){
-                            now_playing_element.innerText = body.now_playing;
+                            if(body.now_playing != 'Advertisement'){
+                                
+                            }else{
+                                now_playing_element.innerText = body.now_playing;
+                            }
+                            
                         }
                         
                     
@@ -243,6 +292,9 @@
 					console.log("Init API result:");
 					console.log(body);
                     
+                    this.station = body.station;
+                    this.playing = body.playing;
+                    
                     this.regenerate_items(body.stations);
                     
                     if(typeof body.debug != 'undefined'){
@@ -252,15 +304,6 @@
                         }
                     }
 					
-					// Remove spinner
-                    /*
-                    try{
-                        document.getElementById("extension-internet-radio-loading").remove();
-                    }
-					catch(e){
-					    console.log("could not delete spinner: ", e);
-					}
-					*/
 				
 		        }).catch((e) => {
 		  			console.log("Error getting InternetRadio init data: " + e.toString());
@@ -282,9 +325,6 @@
         
 		send_search(){
             
-            
-            
-            
 			var text = document.getElementById('extension-internet-radio-search-field').value;
 			//console.log(text);
 			if(text == ""){
@@ -301,10 +341,6 @@
                 search_data['countrycode'] = countrycode;
             }
             
-            
-            
-
-
             var items = [];
             if (search_data.name) {
                 items.push('name=' + encodeURIComponent(search_data.name));
@@ -334,7 +370,6 @@
             //    console.log("got config: ", config);
             //});
             
-            
 		}
         
         
@@ -359,12 +394,9 @@
                     items = this.stations;
                 }
 			
-				items.sort((a, b) => (a.name > b.name) ? 1 : -1)
-		
-				
+				items.sort((a, b) => (a.name > b.name) ? 1 : -1) // sort alphabetically
 				
                 var list = document.getElementById('extension-internet-radio-stations-list');
-	            
                 
                 if(page == 'search'){
                     list = document.getElementById('extension-internet-radio-search-results-list');
@@ -383,15 +415,6 @@
 					
 					var clone = original.cloneNode(true);
 					clone.removeAttribute('id');
-					
-                    //clone.querySelectorAll('.extension-internet-radio-title' )[0].innerText = "bla";
-                    
-                    
-                    
-                    //console.log(" ");
-                    //console.log(item);
-                    //console.log("item: ", items[item]);
-                    
                     
                     var station_name = "Error";
                     var stream_url = "Error";
@@ -404,11 +427,14 @@
                             console.log(' tags_array: ' +  tags_array);
                             const tags_container = clone.getElementsByClassName("extension-internet-radio-item-tags")[0]
                             for (var i = 0; i < tags_array.length; i++) {
-            					var s = document.createElement("span");
-            					s.classList.add('extension-internet-radio-tag');                
-            					var t = document.createTextNode(tags_array[i]);
-            					s.appendChild(t);        
-                                tags_container.append(s);
+            					if(tags_array[i].length > 2){
+                                    var s = document.createElement("span");
+                					s.classList.add('extension-internet-radio-tag');                
+                					var t = document.createTextNode(tags_array[i]);
+                					s.appendChild(t);        
+                                    tags_container.append(s);
+            					}
+                                
                             }
                             
                             //clone.getElementsByClassName("extension-internet-radio-item-tags")[0].innerText = items[item].tags;
@@ -423,14 +449,17 @@
                     clone.getElementsByClassName("extension-internet-radio-item-title")[0].innerText = station_name;
                     clone.getElementsByClassName("extension-internet-radio-item-url")[0].innerText = stream_url;
                     
-                    
+                    if(station_name == this.station && this.playing){
+                        clone.classList.add('extension-internet-radio-item-playing');   
+                    }
                     
                     
                     //var title_element = clone.getElementsByClassName("extension-internet-radio-item-title")[0];
 
                     if(page == 'search'){
                         
-    					// Add station
+    					
+                        // ADD station button
     					const add_button = clone.querySelectorAll('.extension-internet-radio-item-action-button')[0];
                         //console.log("add button? ", add_button);
                         add_button.setAttribute('data-stream_url', stream_url);
@@ -440,24 +469,21 @@
                             const new_name = prompt('Please give this station a name');
                             const new_url = event.target.dataset.stream_url;
                             
-                            console.log("sending: ", new_name, new_url);
-                            
     						var target = event.currentTarget;
     						var parent3 = target.parentElement.parentElement.parentElement;
     						parent3.classList.add("extension-internet-radio-item-added");
-    						var parent4 = parent3.parentElement;
-    						parent4.removeChild(parent3);
+    						//var parent4 = parent3.parentElement;
+    						//parent4.removeChild(parent3);
 					
     						// Send new values to backend
     						window.API.postJson(
     							`/extensions/${this.id}/api/ajax`,
     							{'action':'add', 'name':new_name, 'stream_url':new_url}
     						).then((body) => { 
-    							console.log("add item reaction: ");
-    							console.log(body);
+    							console.log("add item reaction: ", body);
 
     						}).catch((e) => {
-    							console.log("internet-radio: error in delete items handler");
+    							console.log("internet-radio: error in add items handler: ", e);
     							//pre.innerText = "Could not delete that station";
     						});
 					
@@ -466,37 +492,36 @@
                     }
                     else{
                         
-    					// Delete button
+    					// DELETE button
     					const delete_button = clone.querySelectorAll('.extension-internet-radio-item-action-button')[0];
                         //console.log("delete button? ", delete_button);
                         delete_button.setAttribute('data-name', station_name);
                         
     					delete_button.addEventListener('click', (event) => {
                             //console.log("click event: ", event);
-                        
-    						var target = event.currentTarget;
-    						var parent3 = target.parentElement.parentElement.parentElement;
-    						parent3.classList.add("extension-internet-radio-item-delete");
-    						var parent4 = parent3.parentElement;
+                            if(confirm("Are you sure you want to delete this station?")){
+        						var target = event.currentTarget;
+        						var parent3 = target.parentElement.parentElement.parentElement;
+        						parent3.classList.add("extension-internet-radio-item-delete");
+        						var parent4 = parent3.parentElement;
     						
 					
-    						// Send new values to backend
-    						window.API.postJson(
-    							`/extensions/${this.id}/api/ajax`,
-    							{'action':'delete','name': event.target.dataset.name}
-    						).then((body) => { 
-    							console.log("delete item reaction: ");
-    							console.log(body);
-                                if(body.state == 'ok'){
-                                    parent4.removeChild(parent3);
-                                }
+        						// Send new values to backend
+        						window.API.postJson(
+        							`/extensions/${this.id}/api/ajax`,
+        							{'action':'delete','name': event.target.dataset.name}
+        						).then((body) => { 
+        							console.log("delete item reaction: ", body);
+                                    if(body.state == 'ok'){
+                                        parent4.removeChild(parent3);
+                                    }
 
-    						}).catch((e) => {
-    							console.log("internet-radio: error in delete items handler");
-    							pre.innerText = "Could not delete that station"
-                                parent3.classList.remove("extension-internet-radio-item-delete");
-    						});
-					
+        						}).catch((e) => {
+        							console.log("internet-radio: error in delete items handler: ", e);
+        							pre.innerText = "Could not delete that station"
+                                    parent3.classList.remove("extension-internet-radio-item-delete");
+        						});
+                            }
     				  	});
                     }
 
@@ -536,17 +561,19 @@
                     
                     
                     
-                    // play
-                    
+                    // Big play buttons on items. They always turn on a stream.
 					const play_button = clone.querySelectorAll('.extension-internet-radio-play-icon')[0];
                     play_button.setAttribute('data-stream_url', stream_url);
-                    
-                    
 					play_button.addEventListener('click', (event) => {
 					    console.log("event: ", event);
                         console.log(event.path[2]);
                         
-                        event.path[2].classList.add('extension-internet-radio-item-listening');
+                        const playing_items = document.querySelectorAll('.extension-internet-radio-item-playing');
+                        for (var i = 0; i < playing_items.length; ++i) {
+                            playing_items[i].classList.remove('extension-internet-radio-item-playing');
+                        }
+                        event.path[2].classList.add('extension-internet-radio-item-playing');
+                        document.getElementById('extension-internet-radio-now-playing').innerText = "";
                         
                         console.log("play");
                         const play_url = event.target.dataset.stream_url;
@@ -557,8 +584,8 @@
 							`/extensions/${this.id}/api/ajax`,
 							{'action':'play','stream_url': play_url}
 						).then((body) => { 
-							console.log("play reaction: ");
-							console.log(body);
+							console.log("play reaction: ", body);
+
                             
                             play_button.setAttribute('data-playing', true);
                             
