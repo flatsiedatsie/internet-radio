@@ -121,7 +121,9 @@ class InternetRadioAdapter(Adapter):
         self.running = True
         self.playing = False
         self.last_connection_fail_time = 0
-
+        self.poll_counter = 0 # once every 20 UI polls we find out the 'now playing'data. If a play button on the UI is pressed, this counter is also reset.
+        
+        self.in_first_run = True;
         self.audio_output_options = []
         self.now_playing = ""
 
@@ -358,7 +360,7 @@ class InternetRadioAdapter(Adapter):
             url = self.current_stream_url
             encoding = 'latin1'
             
-
+            
             if self.DEBUG:
                 print("Attempting to get now_playing, with url: " + str(url))
 
@@ -429,6 +431,7 @@ class InternetRadioAdapter(Adapter):
                         
                         if any(c.isalpha() for c in stream_title):
                             info = stream_title
+                            self.poll_counter += 1
                     else:
                         pass
             
@@ -510,10 +513,13 @@ class InternetRadioAdapter(Adapter):
                 self.current_stream_url = url
                 
                 #print("set_radio_station; calling get_artist")
-                self.get_artist();
+                #self.get_artist();
                 
                 # Finally, if the station is changed, also turn on the radio
-                self.set_radio_state(True)
+                if self.in_first_run:
+                    self.in_first_run = False
+                else:
+                    self.set_radio_state(True)
                 
             else:
                 self.set_status_on_thing("Not a valid URL")
@@ -525,7 +531,7 @@ class InternetRadioAdapter(Adapter):
 
     def set_radio_state(self,power):
         if self.DEBUG:
-            print("Setting radio power to: " + str(power))
+            print("in set_radio_state. Setting radio power to: " + str(power))
         
         if self.running == False:
             if self.DEBUG:

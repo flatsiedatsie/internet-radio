@@ -37,7 +37,6 @@ class InternetRadioAPIHandler(APIHandler):
         self.DEBUG = self.adapter.DEBUG
 
 
-        self.poll_counter = 0
             
         # Intiate extension addon API handler
         try:
@@ -99,15 +98,16 @@ class InternetRadioAPIHandler(APIHandler):
                     elif action == 'poll':
                         try:
                             if self.DEBUG:
-                                print(str(self.poll_counter))
-                            if self.poll_counter == 0:
+                                print(str(self.adapter.poll_counter))
+                            if self.adapter.poll_counter == 1 and self.adapter.playing:
                                 self.adapter.now_playing = self.adapter.get_artist()
                         except Exception as ex:
                             print("error updating now_playing: " + str(ex))
-                            
-                        self.poll_counter += 1
-                        if self.poll_counter > 20:
-                            self.poll_counter = 0
+                        
+                        #if self.adapter.playing:
+                        self.adapter.poll_counter += 1
+                        if self.adapter.poll_counter > 20:
+                            self.adapter.poll_counter = 0
                             
                         return APIResponse(
                           status=200,
@@ -138,7 +138,7 @@ class InternetRadioAPIHandler(APIHandler):
                         stream_url = str(request.body['stream_url']) 
                         #url = str(request.body['url'])
                         state = 'ok'
-                        self.poll_counter = 0
+                        self.adapter.poll_counter = 0
                         try:
                             self.adapter.set_radio_station(stream_url)     
                         except Exception as ex:
@@ -174,9 +174,9 @@ class InternetRadioAPIHandler(APIHandler):
                         
                         state = 'ok'
                         try:
-                            for i in range(len(self.persistent_data['stations'])):
-                                if self.persistent_data['stations'][i]['name'] == name:
-                                    del self.persistent_data['stations'][i]
+                            for i in range(len(self.adapter.persistent_data['stations'])):
+                                if self.adapter.persistent_data['stations'][i]['name'] == name:
+                                    del self.adapter.persistent_data['stations'][i]
                                     break
                                     
                         except Exception as ex:
