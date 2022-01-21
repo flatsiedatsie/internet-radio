@@ -89,6 +89,9 @@ class InternetRadioAPIHandler(APIHandler):
                     action = str(request.body['action']) 
                     
                     if action == 'init':
+                        if self.DEBUG:
+                            print("in init")
+                        
                         return APIResponse(
                           status=200,
                           content_type='application/json',
@@ -96,36 +99,33 @@ class InternetRadioAPIHandler(APIHandler):
                         )
                         
                     elif action == 'poll':
-                        try:
-                            if self.DEBUG:
-                                print(str(self.adapter.poll_counter))
-                            if self.adapter.poll_counter == 1 and self.adapter.playing:
-                                self.adapter.now_playing = self.adapter.get_artist()
-                        except Exception as ex:
-                            print("error updating now_playing: " + str(ex))
-                        
-                        #if self.adapter.playing:
-                        self.adapter.poll_counter += 1
-                        if self.adapter.poll_counter > 20:
-                            self.adapter.poll_counter = 0
-                            
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'state' : 'ok', 'playing': self.adapter.playing,'now_playing':self.adapter.now_playing}),
+                          content=json.dumps({'state' : 'ok', 'playing': self.adapter.playing,'now_playing':self.adapter.now_playing, 'station': self.adapter.persistent_data['station']}),
                         )
                         
                     elif action == 'add':
-                        #print("in add")
+                        if self.DEBUG:
+                            print("in add")
                         name = str(request.body['name']) 
                         stream_url = str(request.body['stream_url'])
                         #print('name:' + str(name))
                         #print('stream_url: ' + str(stream_url))
                         state = 'ok';
-                        if name != "" and stream_url.startswith('http'):
-                            self.adapter.persistent_data['stations'].append({'name':name,'stream_url':stream_url})
-                        else:
-                            state = "Please provide a valid name"
+                        try:
+                            if name != "" and stream_url.startswith('http'):
+                                print("- add: valid inputs")
+                                self.adapter.persistent_data['stations'].append({'name':name,'stream_url':stream_url})
+                            
+                                self.adapter.devices['internet-radio'].update_stations_property()
+                            
+                                self.adapter.save_persistent_data()
+                                
+                            else:
+                                state = "Please provide a valid name"
+                        except Exception as ex:
+                            print("Error adding: " + str(ex))
                         
                         return APIResponse(
                           status=200,
@@ -133,8 +133,50 @@ class InternetRadioAPIHandler(APIHandler):
                           content=json.dumps({'state' : state}),
                         )
                         
+                    elif action == 'volume_down':
+                        if self.DEBUG:
+                            print("in volume down")
+                        state = 'ok'
+                        try:
+                            self.adapter.persistent_data['volume'] -= 5
+                            if self.adapter.persistent_data['volume'] < 0:
+                                self.adapter.persistent_data['volume'] = 0
+                            self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
+                        except Exception as ex:
+                            if self.DEBUG:
+                                print("API: error setting volume: " + str(ex))
+                            state = "Error: could not lower volume";
+                            
+                        return APIResponse(
+                          status=200,
+                          content_type='application/json',
+                          content=json.dumps({'state' : state}),
+                        )
+                        
+                    elif action == 'volume_up':
+                        if self.DEBUG:
+                            print("in volume up")
+                        state = 'ok'
+                        try:
+                            self.adapter.persistent_data['volume'] += 5
+                            if self.adapter.persistent_data['volume'] > 100:
+                                self.adapter.persistent_data['volume'] = 100
+                            
+                            self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
+                        except Exception as ex:
+                            if self.DEBUG:
+                                print("API: error setting volume: " + str(ex))
+                            state = "Error: could not raise volume";
+                            
+                        return APIResponse(
+                          status=200,
+                          content_type='application/json',
+                          content=json.dumps({'state' : state}),
+                        )
+                        
                     elif action == 'play':
-                        #print("in play")
+                        if self.DEBUG:
+                            print("in play")
                         stream_url = str(request.body['stream_url']) 
                         #url = str(request.body['url'])
                         state = 'ok'
@@ -153,7 +195,8 @@ class InternetRadioAPIHandler(APIHandler):
                         )
                         
                     elif action == 'toggle':
-                        #print("in toggle")
+                        if self.DEBUG:
+                            print("in toggle")
                         #url = str(request.body['url'])
                         #desired_state = bool(request.body['desired_state']) 
                         opposite = not self.adapter.playing;
@@ -169,16 +212,30 @@ class InternetRadioAPIHandler(APIHandler):
                         )
                         
                     elif action == 'delete':
-                        #print("in quick delete")
+                        if self.DEBUG:
+                            print("in delete")
                         name = str(request.body['name'])
                         
                         state = 'ok'
                         try:
-                            for i in range(len(self.adapter.persistent_data['stations'])):
-                                if self.adapter.persistent_data['stations'][i]['name'] == name:
-                                    del self.adapter.persistent_data['stations'][i]
-                                    break
-                                    
+                            if len(self.adapter.persistent_data['stations']) > 1: #one station must remain
+                                
+                                # if we're deleting the station that is playing, play another station first
+                                if self.adapter.persistent_data['station'] == name:
+                                    self.adapter.persistent_data['station'] = self.adapter.persistent_data['stations'][0]['name']
+                                    self.adapter.set_radio_station(self.adapter.persistent_data['station'])
+                            
+                                # remove it from the stations list
+                                for i in range(len(self.adapter.persistent_data['stations'])):
+                                    if self.adapter.persistent_data['stations'][i]['name'] == name:
+                                        del self.adapter.persistent_data['stations'][i]
+                                        break
+                                        
+                                # Update the device to have the correct enum
+                                self.adapter.devices['internet-radio'].update_stations_property()
+                                
+                                self.adapter.save_persistent_data()
+                            
                         except Exception as ex:
                             if self.DEBUG:
                                 print("Error deleting station: " + str(ex))
