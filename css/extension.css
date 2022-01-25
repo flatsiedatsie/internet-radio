@@ -319,6 +319,7 @@
     display: inline-block;
     margin-bottom: 0.4rem;
     border-radius: 0.5rem;
+    cursor:pointer;
 }
 
 
@@ -574,8 +575,8 @@
 	background-image: url(/images/enable.svg);
 	border-radius: 2.8rem;
     cursor:pointer;
-    background-size: 50%;
-    background-position: 65% center;
+    background-size: 40%;
+    background-position: 60% center;
 }
 
 
@@ -584,6 +585,7 @@
 	font-size: 1.6rem;
 	padding: 1rem 2rem;
 	border: none;
+    background-color: #7aadd1;
 }
 #extension-internet-radio-view button:focus{
     outline: none;

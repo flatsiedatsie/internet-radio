@@ -286,6 +286,7 @@
                         else{
                             document.getElementById('extension-internet-radio-content').classList.remove('extension-internet-radio-playing');
                         }
+                        this.get_init_data(); //update the stations to show which one is playing.
                     }
 				
 		        }).catch((e) => {
@@ -427,27 +428,46 @@
         //  SEARCH
         //
         
-		send_search(amount){
+		send_search(options){
             var items = [];
-            var query_type = 'search'; // topvote
+            
+            
+            if(typeof options == 'undefined'){
+                options = {};
+            }
+            
+            // Query type
+            var query_type = 'search';
+            if(typeof options.query_type != 'undefined') {
+                console.log(options.query_type);
+                query_type = options.query_type;
+            }
             
             
             // LIMIT
             // If no amount provided, set default
+            /*
             if(typeof amount == 'undefined'){
                 amount = 20;
                 if(this.get_more_search_results){
-                    amount = 100;
+                    
                 }
             }
+            */
+            const amount = 100;
             items.push('limit=' + encodeURIComponent(amount));
             console.log("Search amount: ", amount);
             
+            
             // NAME
-            const text = document.getElementById('extension-internet-radio-search-field').value;
+            var text = "";
+            if(query_type == 'search'){
+                text = document.getElementById('extension-internet-radio-search-field').value;
+            }
             if(text != ""){
                 items.push('name=' + encodeURIComponent(text));
 			}
+            
             
             // COUNTRY
             const countrycode = document.getElementById('extension-internet-radio-countries-dropdown').value;
@@ -476,7 +496,16 @@
             console.log("items and length: ", items, items.length);
             
             if(items.length > 1){
-                api_path = this.radio_browser_server + '/json/stations/' + query_type + '?' + items.join('&');   
+                if(query_type == 'search'){
+                    api_path = this.radio_browser_server + '/json/stations/' + query_type + '?' + items.join('&');   
+                }
+                
+            }
+            else if(query_type == 'bytagexact'){
+                console.log("searching by exact tag");
+                if(typeof options.tag != 'undefined'){
+                    api_path = this.radio_browser_server + '/json/stations/' + query_type + '/'  + options.tag + '?' + items.join('&');   
+                }
             }
             else{
                 console.log("doing a last_click search (semi-random)");
@@ -519,7 +548,7 @@
                     items = this.stations;
                 }
 			
-				items.sort((a, b) => (a.name > b.name) ? 1 : -1) // sort alphabetically
+				items.sort((a, b) => (a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : -1) // sort alphabetically
 				
                 var list = document.getElementById('extension-internet-radio-stations-list');
                 
@@ -557,9 +586,13 @@
                                     var s = document.createElement("span");
                 					s.classList.add('extension-internet-radio-tag');                
                 					var t = document.createTextNode(tags_array[i]);
-                					s.appendChild(t);        
+                					s.appendChild(t);
+                                    s.addEventListener('click', (event) => {
+                                        console.log('clicked on tag: ', event.target.innerText);
+                                        this.send_search({'query_type':'bytagexact','tag':event.target.innerText})
+                                    });
                                     tags_container.append(s);
-            					}
+                                }
                                 
                             }
                             

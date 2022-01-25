@@ -126,6 +126,7 @@ class InternetRadioAdapter(Adapter):
         self.in_first_run = True;
         self.audio_output_options = []
         self.now_playing = "" # will hold artist and song title
+        self.current_stream_has_now_playing_info = True
 
         # Get audio output options
         if sys.platform != 'darwin':
@@ -373,6 +374,7 @@ class InternetRadioAdapter(Adapter):
     def get_artist(self):
         info = ''
         self.poll_counter += 1
+            
         try:
             url = self.persistent_data['current_stream_url']
             encoding = 'latin1'
@@ -381,6 +383,10 @@ class InternetRadioAdapter(Adapter):
                 self.set_artist_on_thing(None)
                 self.set_song_on_thing(None)
                 return ""
+                
+            if self.current_stream_has_now_playing_info == False:
+                return
+                
             #if self.DEBUG:
             #    print("in get_artist (a.k.a. get now_playing), with url: " + str(url))
 
@@ -483,12 +489,13 @@ class InternetRadioAdapter(Adapter):
                 else:
                     self.set_song_on_thing(None)
                     self.set_artist_on_thing(None)
+                    self.current_stream_has_now_playing_info = False # avoid continuously polling a station that doesn't provide now_playing information
             
         except Exception as ex:
             print("Error in get_artist: " + str(ex))
         
-        if self.DEBUG:
-            print('get_artist >> Now playing: ', info)
+        #if self.DEBUG:
+        #    print('get_artist >> Now playing: ', info)
         return info
             
             
@@ -561,13 +568,13 @@ class InternetRadioAdapter(Adapter):
                         print("Extracted URL = " + str(url))
 
                 self.persistent_data['current_stream_url'] =  url
-                #print("set_radio_station; calling get_artist")
-                #self.get_artist();
+                self.save_persistent_data()
                 
+                # get_artist preparation
                 self.now_playing = ""
                 self.set_song_on_thing(None)
                 self.set_artist_on_thing(None)
-                
+                self.current_stream_has_now_playing_info = True # reset this, so get_artist will try to get now_playing info
                 self.poll_counter = 18 # this will cause get_artist to be called again soon
                 
                 # Finally, if the station is changed, also turn on the radio
@@ -847,8 +854,8 @@ class InternetRadioAdapter(Adapter):
 
 
     def set_song_on_thing(self, song_string):
-        if self.DEBUG:
-            print("new song on thing: " + str(song_string))
+        #if self.DEBUG:
+        #    print("new song on thing: " + str(song_string))
         try:
             if self.devices['internet-radio'] != None:
                 #self.devices['internet-radio'].properties['status'].set_cached_value_and_notify( str(status_string) )
@@ -858,8 +865,8 @@ class InternetRadioAdapter(Adapter):
 
 
     def set_artist_on_thing(self, artist_string):
-        if self.DEBUG:
-            print("new artist on thing: " + str(artist_string))
+        #if self.DEBUG:
+        #    print("new artist on thing: " + str(artist_string))
         try:
             if self.devices['internet-radio'] != None:
                 #self.devices['internet-radio'].properties['status'].set_cached_value_and_notify( str(status_string) )
@@ -1158,7 +1165,7 @@ class InternetRadioDevice(Device):
 
 
     def update_stations_property(self, call_handle_device_added=True):
-        print("in update_stations_property")
+        #print("in update_stations_property")
         # Create list of radio station names for the radio thing.
         radio_stations_names = []
         for station in self.adapter.persistent_data['stations']:
@@ -1168,7 +1175,7 @@ class InternetRadioDevice(Device):
             radio_stations_names.append(str(station['name']))
         
         self.adapter.radio_station_names_list = radio_stations_names
-        print("remaking property? List: " + str(radio_stations_names))
+        #print("remaking property? List: " + str(radio_stations_names))
         self.properties["station"] = InternetRadioProperty(
                         self,
                         "station",
@@ -1179,10 +1186,8 @@ class InternetRadioDevice(Device):
                         },
                         self.adapter.persistent_data['station'])
 
-        print("notify that it changed?:")
         self.adapter.handle_device_added(self);
         self.notify_property_changed(self.properties["station"])
-        print("did that work?")
 
 
 #
@@ -1201,7 +1206,7 @@ class InternetRadioProperty(Property):
         self.set_cached_value(value)
         self.device.notify_property_changed(self)
         
-        print("property: initiated: " + str(self.name))
+        #print("property: initiated: " + str(self.name))
 
 
     def set_value(self, value):
