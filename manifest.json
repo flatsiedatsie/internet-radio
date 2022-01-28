@@ -26,10 +26,15 @@
   "name": "Internet radio",
   "options": {
     "default": {
+	  "Show buttons everywhere": false,
       "Debugging": false
     },
     "schema": {
       "properties": {
+        "Show buttons everywhere": {
+          "type": "boolean",
+          "description": "If you enable this feature, the volume and play/pause buttons will be shown on all pages, not just on the internet radio page itself."
+		},
         "Debugging": {
           "type": "boolean",
           "description": "Advanced. Debugging allows you to diagnose any issues with the add-on. If enabled it will result in a lot more debug data in the internal log (which can be found under settings -> developer -> view internal logs)."

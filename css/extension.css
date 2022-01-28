@@ -121,7 +121,7 @@
 }
 
 #extension-internet-radio-stations-list > *{
-    width: 40rem;
+    width: 20rem;
     min-width:40rem;
     max-width:80rem;
     margin:2rem;
@@ -448,12 +448,20 @@
     width: 5.6rem;
     height: 5.6rem;
     border-radius: 2.8rem;
-    background-color:rgba(0,0,0,.8);
+    background-color:rgba(255,255,255,.2);
     border:2px solid transparent;
 	position: fixed;
-	top: 2rem;
-	right: 18rem;
+	top: 24.8rem;
+	left:2rem;
+    z-index:998;
 }
+/*
+#extension-internet-radio-view #extension-internet-radio-volume-down-button{
+    right: 18rem;
+}
+*/
+#extension-internet-radio-volume-down-button:hover{opacity:1;}
+
 
 #extension-internet-radio-volume-up-button{
 	background-image: url(/extensions/internet-radio/images/volume-up-icon.svg);
@@ -470,13 +478,19 @@
     width: 5.6rem;
     height: 5.6rem;
     border-radius: 2.8rem;
-    background-color:rgba(0,0,0,.8);
+    background-color:rgba(255,255,255,.2);
     border:2px solid transparent;
 	position: fixed;
-	top: 2rem;
-	right: 10rem;
+	top: 17.2rem;
+	left:2rem; /* was right 18 */
+    z-index:998;
 }
-
+/*
+#extension-internet-radio-view #extension-internet-radio-volume-up-button{
+    right: 10rem;
+}
+*/
+#extension-internet-radio-volume-up-button:hover{opacity:1;}
 
 
 .extension-internet-radio-play-icon{
@@ -542,8 +556,8 @@
 	background-image: url(/images/disable.svg);
     cursor:pointer;
     position: fixed;
-    top:2rem;
-    right:2rem;
+    top:9.6rem;
+    left:2rem;
     width: 5.6rem;
     height: 5.6rem;
     border-radius: 2.8rem;
@@ -559,24 +573,31 @@
     -ms-user-select: none;
     user-select: none;
     outline: 0;
-    z-index: 100;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 6%), 0 1px 2px rgb(0 0 0 / 12%);
+    z-index: 998;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 6%), 0 1px 2px rgb(0 0 0 / 12%);    
     
 }
+/*
+#extension-internet-radio-view #extension-internet-radio-toggle-button{
+    right:2rem;
+}
+*/
+
+
 #extension-internet-radio-toggle-button:hover{
     opacity:1;
 }
 
 
-#extension-internet-radio-content:not(.extension-internet-radio-playing) #extension-internet-radio-toggle-button{
-	position: fixed;
-	bottom: 2rem;
-	right: 2rem;
+body:not(.extension-internet-radio-playing) #extension-internet-radio-toggle-button{
 	background-image: url(/images/enable.svg);
-	border-radius: 2.8rem;
-    cursor:pointer;
     background-size: 40%;
     background-position: 60% center;
+}
+
+body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-up-button,
+body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-down-button{
+    display:none;
 }
 
 
@@ -660,6 +681,72 @@
 
 
 
+/*  spinner  */
+
+#extension-internet-radio-loading{
+    text-align:center;
+    margin-top:4rem;
+}
+
+.extension-internet-radio-spinner {
+  display: inline-block;
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin:0 auto;
+}
+.extension-internet-radio-spinner div {
+  position: absolute;
+  top: 33px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.5);
+  animation-timing-function: cubic-bezier(0, 1, 1, 0);
+}
+.extension-internet-radio-spinner div:nth-child(1) {
+  left: 8px;
+  animation: extension-internet-radio-spinner1 0.6s infinite;
+}
+.extension-internet-radio-spinner div:nth-child(2) {
+  left: 8px;
+  animation: extension-internet-radio-spinner2 0.6s infinite;
+}
+.extension-internet-radio-spinner div:nth-child(3) {
+  left: 32px;
+  animation: extension-internet-radio-spinner2 0.6s infinite;
+}
+.extension-internet-radio-spinner div:nth-child(4) {
+  left: 56px;
+  animation: extension-internet-radio-spinner3 0.6s infinite;
+}
+@keyframes extension-internet-radio-spinner1 {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes extension-internet-radio-spinner3 {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0);
+  }
+}
+@keyframes extension-internet-radio-spinner2 {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(24px, 0);
+  }
+}
+
+
+
 
 #extension-internet-radio-debug-warning{
     max-width:60rem;
@@ -670,6 +757,19 @@
     border-radius:.5rem;
 }
 
+
+
+@media screen and (max-width: 640px) {
+    #extension-internet-radio-volume-up-button{display:none;}
+    #extension-internet-radio-volume-down-button{display:none;}
+    body:not(.extension-internet-radio-playing) #extension-internet-radio-toggle-button{display:none;}
+
+    #extension-internet-radio-now-playing:not(:empty)::before{
+        display:block;
+        text-align:center;
+    }
+    
+}
 
 @media screen and (min-width: 641px) {
 	.extension-internet-radio-line2 > div{

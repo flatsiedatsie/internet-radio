@@ -37,55 +37,6 @@ if 'WEBTHINGS_HOME' in os.environ:
 
 
 
-
-
-
-
-"""
-      "Radio stations": [
-        {
-          "name": "Country",
-          "stream_url": "http://sc3c-sjc.1.fm:7806"
-        },
-        {
-          "name": "Fip",
-          "stream_url": "http://direct.fipradio.fr/live/fip-midfi.mp3"
-        },
-        {
-          "name": "Groove salad",
-          "stream_url": "http://ice.somafm.com/groovesalad"
-        },
-        {
-          "name": "Hip Hop",
-          "stream_url": "http://whatradio.macchiatomedia.org:9119/"
-        },
-        {
-          "name": "Freaky",
-          "stream_url": "https://stream.31media.net/freak31"
-        },
-        {
-          "name": "Latin",
-          "stream_url": "http://radiolatina.info:7087/"
-        },
-        {
-          "name": "Rock",
-          "stream_url": "http://sorradio.org:5005/live"
-        },
-        {
-          "name": "Secret agent",
-          "stream_url": "http://ice.somafm.com/secretagent"
-        },
-        {
-          "name": "Talk",
-          "stream_url": "https://playerservices.streamtheworld.com/api/livestream-redirect/CSPANRADIO.mp3"
-        },
-        {
-          "name": "Ten",
-          "stream_url": "http://stream.radio10.nl/radio10"
-        }
-      ], 
-"""
-
 class InternetRadioAdapter(Adapter):
     """Adapter for Internet Radio"""
 
@@ -122,6 +73,7 @@ class InternetRadioAdapter(Adapter):
         self.playing = False
         self.last_connection_fail_time = 0
         self.poll_counter = 0 # once every 20 UI polls we find out the 'now playing'data. If a play button on the UI is pressed, this counter is also reset.
+        self.show_buttons_everywhere = False
         
         self.in_first_run = True;
         self.audio_output_options = []
@@ -280,6 +232,14 @@ class InternetRadioAdapter(Adapter):
             self.DEBUG = bool(config['Debugging'])
             if self.DEBUG:
                 print("Debugging enabled")
+
+        if 'Show buttons everywhere' in config:
+            #print("-Debugging was in config")
+            self.show_buttons_everywhere = bool(config['Show buttons everywhere'])
+            if self.DEBUG:
+                print("Show buttons everywhere preference was in config: " + str(self.show_buttons_everywhere))
+
+        
 
         if self.DEBUG:
             print(str(config))

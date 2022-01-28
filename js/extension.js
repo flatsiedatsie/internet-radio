@@ -18,6 +18,7 @@
 			this.all_things;
 			this.items_list = [];
 			this.current_time = 0;
+            this.show_buttons_everywhere = false;
             
             this.stations = [];
             this.station = ""; // name of station that is currently playing (if the user has named the stream)
@@ -51,6 +52,8 @@
 	  		  	}
 	        })
 	        .catch((e) => console.error('Failed to fetch content:', e));
+            
+            this.get_init_data(false); // do not generate the radio stations list yet
             
 	    }
 
@@ -227,77 +230,6 @@
 			});
             
             
-            
-            //
-            
-            // Volume down
-            document.getElementById('extension-internet-radio-volume-down-button').addEventListener('click', (event) => {
-                console.log("volume down button clicked");
-                
-		        window.API.postJson(
-		          `/extensions/${this.id}/api/ajax`,
-                    {'action':'volume_down'}
-
-		        ).then((body) => {
-					console.log("Volume down result:");
-					console.log(body);
-				
-		        }).catch((e) => {
-		  			console.log("Error changing radio volume: " + e.toString());
-		        });	
-			});
-           
-           
-            // Volume up
-            document.getElementById('extension-internet-radio-volume-up-button').addEventListener('click', (event) => {
-                console.log("volume up button clicked");
-                
-		        window.API.postJson(
-		          `/extensions/${this.id}/api/ajax`,
-                    {'action':'volume_up'}
-
-		        ).then((body) => {
-					console.log("Volume up result:");
-					console.log(body);
-				
-		        }).catch((e) => {
-		  			console.log("Error changing radio volume: " + e.toString());
-		        });	
-			}); 
-            
-            
-            
-            
-            // Play/Pause toggle
-            document.getElementById('extension-internet-radio-toggle-button').addEventListener('click', (event) => {
-                console.log("top-right stop button clicked");
-                
-		        window.API.postJson(
-		          `/extensions/${this.id}/api/ajax`,
-                    {'action':'toggle'}
-
-		        ).then((body) => {
-					console.log("Toggle result:");
-					console.log(body);
-                    if(typeof body.playing != 'undefined'){
-                        if(body.playing){
-                            document.getElementById('extension-internet-radio-content').classList.add('extension-internet-radio-playing');
-                        }
-                        else{
-                            document.getElementById('extension-internet-radio-content').classList.remove('extension-internet-radio-playing');
-                        }
-                        this.get_init_data(); //update the stations to show which one is playing.
-                    }
-				
-		        }).catch((e) => {
-		  			console.log("Error toggling radio: " + e.toString());
-		        });	
-                
-                
-
-			});
-            
-            
         
 		    
 		    
@@ -384,7 +316,12 @@
 		}
 		
 	
-        get_init_data(){
+        get_init_data(regenerate){
+            
+            if(typeof regenerate == 'undefined'){
+                regenerate = true;
+            }
+            
 			try{
 				//pre.innerText = "";
 				
@@ -394,13 +331,32 @@
                     {'action':'init'}
 
 		        ).then((body) => {
-					console.log("Init API result:");
-					console.log(body);
+					console.log("Internet radio Init API result: ", body);
                     
                     this.station = body.station;
+                    
                     this.playing = body.playing;
                     
-                    this.regenerate_items(body.stations);
+                    if(body.playing){
+                        console.log("icon should show playing state (pause icon)");
+                        document.body.classList.add('extension-internet-radio-playing');
+                    }
+                    else{
+                        console.log("icon should show paused state (play icon)");
+                        document.body.classList.remove('extension-internet-radio-playing');
+                    }
+                    
+                    
+                    if(regenerate){
+                        console.log("regenerating radio stations view");
+                        this.regenerate_items(body.stations);
+                    }
+                    
+                    
+                    this.show_buttons_everywhere = body.show_buttons_everywhere;
+                    console.log("this.show_buttons_everywhere is now: " + this.show_buttons_everywhere);
+                    
+                    this.create_volume_and_play_buttons();
                     
                     if(typeof body.debug != 'undefined'){
                         if(body.debug){
@@ -421,6 +377,134 @@
 				console.log("Error in init: " + e);
 			}
         }
+    
+    
+        //
+        //  Create volume and play buttons.
+        //
+        
+    
+        create_volume_and_play_buttons(){
+            
+            var target_to_attach_buttons_to = document.getElementById('extension-internet-radio-content-container');
+            
+            if(this.show_buttons_everywhere){
+                target_to_attach_buttons_to = document.body;
+            }
+            
+            console.log("target_to_attach_buttons_to: ", target_to_attach_buttons_to);
+            
+            // Check the buttons need to be added.
+            
+            if(document.getElementById('extension-internet-radio-volume-down-button') == null){
+                console.log("adding volume down button");
+                var down_button = document.createElement('button');
+                down_button.setAttribute("id","extension-internet-radio-volume-down-button");
+                down_button.setAttribute("class","icon-button");
+                down_button.setAttribute("aria-label","volume down");
+                target_to_attach_buttons_to.append(down_button);
+            }
+            
+            if(document.getElementById('extension-internet-radio-volume-up-button') == null){
+                console.log("adding volume up button");
+                var up_button = document.createElement('button');
+                up_button.setAttribute("id","extension-internet-radio-volume-up-button");
+                up_button.setAttribute("class","icon-button");
+                up_button.setAttribute("aria-label","volume up");
+                target_to_attach_buttons_to.append(up_button);
+            }
+            
+            if(document.getElementById('extension-internet-radio-toggle-button') == null){
+                console.log("adding radio toggle button");
+                var toggle_button = document.createElement('button');
+                toggle_button.setAttribute("id","extension-internet-radio-toggle-button");
+                toggle_button.setAttribute("class","icon-button");
+                toggle_button.setAttribute("aria-label","play/pause");
+                
+                toggle_button.addEventListener('click', (event) => {
+                    console.log("top-right stop button clicked");
+            
+    		        window.API.postJson(
+    		          `/extensions/${this.id}/api/ajax`,
+                        {'action':'toggle'}
+
+    		        ).then((body) => {
+    					console.log("Toggle result:");
+    					console.log(body);
+                        if(typeof body.playing != 'undefined'){
+                            if(body.playing){
+                                console.log("icon should show playing state (pause icon)");
+                                document.body.classList.add('extension-internet-radio-playing');
+                            }
+                            else{
+                                console.log("icon should show paused state (play icon)");
+                                document.body.classList.remove('extension-internet-radio-playing');
+                            }
+                            this.get_init_data(); //update the stations to show which one is playing.
+                        }
+			
+    		        }).catch((e) => {
+    		  			console.log("Error toggling radio: " + e.toString());
+    		        });	
+                });
+                
+                
+                target_to_attach_buttons_to.append(toggle_button);
+            }
+            
+            // Volume down
+            document.getElementById('extension-internet-radio-volume-down-button').addEventListener('click', (event) => {
+                console.log("volume down button clicked");
+                
+		        window.API.postJson(
+		          `/extensions/${this.id}/api/ajax`,
+                    {'action':'volume_down'}
+
+		        ).then((body) => {
+					console.log("Volume down result:");
+					console.log(body);
+				
+		        }).catch((e) => {
+		  			console.log("Error changing radio volume: " + e.toString());
+		        });	
+			});
+           
+           
+            // Volume up
+            document.getElementById('extension-internet-radio-volume-up-button').addEventListener('click', (event) => {
+                console.log("volume up button clicked");
+                
+		        window.API.postJson(
+		          `/extensions/${this.id}/api/ajax`,
+                    {'action':'volume_up'}
+
+		        ).then((body) => {
+					console.log("Volume up result:");
+					console.log(body);
+				
+		        }).catch((e) => {
+		  			console.log("Error changing radio volume: " + e.toString());
+		        });	
+			}); 
+            
+            
+            // Play/Pause toggle
+            //document.getElementById('extension-internet-radio-toggle-button')
+
+            
+        }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
 	
