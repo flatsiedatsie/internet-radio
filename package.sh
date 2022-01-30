@@ -20,7 +20,7 @@ fi
 mkdir package
 
 # Put package together
-cp -r pkg LICENSE manifest.json *.py README.md package/
+cp -r pkg LICENSE manifest.json *.py css js images views README.md package/
 find package -type f -name '*.pyc' -delete
 find package -type f -name '._*' -delete
 find package -type d -empty -delete
@@ -36,10 +36,5 @@ tar czf ${TARFILE} package
 
 shasum --algorithm 256 ${TARFILE} > ${TARFILE}.sha256sum
 
-
-#rm -rf SHA256SUMS package
-#sha256sum "internet-radio-${version}.tgz"
-
 tar czf "internet-radio-${version}.tgz" package
 cat ${TARFILE}.sha256sum
-#sha256sum "internet-radio-${version}.tgz"
