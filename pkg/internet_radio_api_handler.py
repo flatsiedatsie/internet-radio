@@ -150,7 +150,7 @@ class InternetRadioAPIHandler(APIHandler):
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'state' : state}),
+                          content=json.dumps({'state' : state, 'volume': self.adapter.persistent_data['volume']}),
                         )
                         
                     elif action == 'volume_up':
@@ -171,7 +171,7 @@ class InternetRadioAPIHandler(APIHandler):
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'state' : state}),
+                          content=json.dumps({'state' : state, 'volume': self.adapter.persistent_data['volume']}),
                         )
                         
                     elif action == 'play':
@@ -208,7 +208,7 @@ class InternetRadioAPIHandler(APIHandler):
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'state' : 'ok', 'playing': opposite}),
+                          content=json.dumps({'state' : 'ok', 'playing': opposite, 'volume': self.adapter.persistent_data['volume']}),
                         )
                         
                     elif action == 'delete':
