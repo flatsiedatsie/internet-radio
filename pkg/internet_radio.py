@@ -1045,7 +1045,7 @@ class InternetRadioDevice(Device):
                             "power",
                             {
                                 '@type': 'OnOffProperty',
-                                'title': "Power",
+                                'title': "State",
                                 'readOnly': False,
                                 'type': 'boolean'
                             },
