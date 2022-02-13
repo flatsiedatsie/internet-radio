@@ -95,14 +95,14 @@ class InternetRadioAPIHandler(APIHandler):
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'playing' : self.adapter.playing, 'debug': self.adapter.DEBUG, 'stations':self.adapter.persistent_data['stations'], 'station':self.adapter.persistent_data['station'], 'show_buttons_everywhere':self.adapter.show_buttons_everywhere}),
+                          content=json.dumps({'playing' : self.adapter.persistent_data['playing'], 'debug': self.adapter.DEBUG, 'stations':self.adapter.persistent_data['stations'], 'station':self.adapter.persistent_data['station'], 'show_buttons_everywhere':self.adapter.show_buttons_everywhere}),
                         )
                         
                     elif action == 'poll':
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'state' : 'ok', 'playing': self.adapter.playing,'now_playing':self.adapter.now_playing, 'station': self.adapter.persistent_data['station']}),
+                          content=json.dumps({'state' : 'ok', 'playing': self.adapter.persistent_data['playing'],'now_playing':self.adapter.now_playing, 'station': self.adapter.persistent_data['station']}),
                         )
                         
                     elif action == 'add':
@@ -112,7 +112,7 @@ class InternetRadioAPIHandler(APIHandler):
                         stream_url = str(request.body['stream_url'])
                         #print('name:' + str(name))
                         #print('stream_url: ' + str(stream_url))
-                        state = 'ok';
+                        state = 'ok'
                         try:
                             if name != "" and stream_url.startswith('http'):
                                 print("- add: valid inputs")
@@ -145,7 +145,7 @@ class InternetRadioAPIHandler(APIHandler):
                         except Exception as ex:
                             if self.DEBUG:
                                 print("API: error setting volume: " + str(ex))
-                            state = "Error: could not lower volume";
+                            state = "Error: could not lower volume"
                             
                         return APIResponse(
                           status=200,
@@ -166,7 +166,7 @@ class InternetRadioAPIHandler(APIHandler):
                         except Exception as ex:
                             if self.DEBUG:
                                 print("API: error setting volume: " + str(ex))
-                            state = "Error: could not raise volume";
+                            state = "Error: could not raise volume"
                             
                         return APIResponse(
                           status=200,
@@ -186,7 +186,7 @@ class InternetRadioAPIHandler(APIHandler):
                         except Exception as ex:
                             if self.DEBUG:
                                 print("API: error setting station: " + str(ex))
-                            state = "Error: could not change station";
+                            state = "Error: could not change station"
                             
                         return APIResponse(
                           status=200,
@@ -199,7 +199,7 @@ class InternetRadioAPIHandler(APIHandler):
                             print("in toggle")
                         #url = str(request.body['url'])
                         #desired_state = bool(request.body['desired_state']) 
-                        opposite = not self.adapter.playing;
+                        opposite = not self.adapter.persistent_data['playing']
                         try:
                             self.adapter.set_radio_state(opposite)        
                         except Exception as ex:

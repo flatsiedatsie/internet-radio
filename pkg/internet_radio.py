@@ -70,7 +70,7 @@ class InternetRadioAdapter(Adapter):
         self.persistence_file_path = os.path.join(self.user_profile['dataDir'], self.addon_name, 'persistence.json')
 
         self.running = True
-        self.playing = False
+        self.clock_active = False
         self.last_connection_fail_time = 0
         self.poll_counter = 0 # once every 20 UI polls we find out the 'now playing'data. If a play button on the UI is pressed, this counter is also reset.
         self.show_buttons_everywhere = False
@@ -137,6 +137,9 @@ class InternetRadioAdapter(Adapter):
 
 
 
+
+            
+
         # LOAD CONFIG
 
         self.persistent_data['current_stream_url'] = None
@@ -148,7 +151,11 @@ class InternetRadioAdapter(Adapter):
         except Exception as ex:
             print("Error loading config: " + str(ex))
 
+        if 'playing' not in self.persistent_data:
+            self.persistent_data['playing'] = False
 
+
+        # Start the API handler
         try:
             if self.DEBUG:
                 print("starting api handler")
@@ -266,59 +273,70 @@ class InternetRadioAdapter(Adapter):
         """ Runs every second and handles the various timers """
         if self.DEBUG:
             print("CLOCK INIT. self.player: " + str(self.player))
-            print("self.playing: " + str(self.playing))
-        clock_active = True
+            print("self.persistent_data['playing']: " + str(self.persistent_data['playing']))
+        
+        #self.clock_started = True
+        self.clock_active = True
+        
         while clock_active and self.running: # and self.player != None
             time.sleep(1)
             
+            if self.persistent_data['playing'] == True:
+                try:
+                    #if self.DEBUG:
+                    #    print(str(self.adapter.poll_counter))
+                    if self.poll_counter == 0:
+                        self.now_playing = self.get_artist()
+                except Exception as ex:
+                    print("error updating now_playing: " + str(ex))
             
-            try:
-                #if self.DEBUG:
-                #    print(str(self.adapter.poll_counter))
-                if self.poll_counter == 0:
-                    self.now_playing = self.get_artist()
-            except Exception as ex:
-                print("error updating now_playing: " + str(ex))
-            
-            #if self.adapter.playing:
-            self.poll_counter += 1
-            if self.poll_counter > 20:
-                self.poll_counter = 0
+                #if self.adapter.playing:
+                self.poll_counter += 1
+                if self.poll_counter > 20:
+                    self.poll_counter = 0
             
             
-            #print("playing")
-            # Wait until process terminates (without using p.wait())
-            poll_result = self.player.poll()
-            if poll_result is None:
                 #print("playing")
-                pass
-            else:
-                #print("poll_result: " + str(poll_result))
-                # Get return code from process
-                return_code = self.player.returncode
-                if self.DEBUG:
-                    print("clock: self.player process polling return_code: " + str(return_code))
-                if self.playing == True:
-                    print("Error, radio stopped playing but was supposed to still be playing.")
-                    
-                    if time.time() - self.last_connection_fail_time < 5:
+                # Wait until process terminates (without using p.wait())
+                poll_result = self.player.poll()
+                if poll_result is None:
+                    #print("playing")
+                    pass
+                else:
+                    time.sleep(1)
+                    #print("poll_result: " + str(poll_result))
+                    # Get return code from process
+                    return_code = self.player.returncode
+                    if self.DEBUG:
+                        print("clock: self.player process polling return_code: " + str(return_code))
+                    if self.persistent_data['playing'] == True:
                         if self.DEBUG:
-                            print("Already disconnected less than 5 seconds ago too. Something is wrong, turning off radio.")
-                        self.set_radio_state(False)
-                        self.set_status_on_thing("Could not connect to station")
-                        clock_active = False
-                        
-                    else:
+                            print("Error, radio unexpectedly stopped playing.")
+                    
                         self.set_radio_state(True)
                     
-                    self.last_connection_fail_time = time.time()
-                    time.sleep(3)
+                        """
+                        if time.time() - self.last_connection_fail_time < 5:
+                            if self.DEBUG:
+                                print("Already disconnected less than 5 seconds ago too. Something is wrong, turning off radio.")
+                            self.set_radio_state(False)
+                            self.set_status_on_thing("Could not connect to station")
+                            clock_active = False
+                        
+                        else:
+                            self.set_radio_state(True)
+                        """
+                    
+                        self.last_connection_fail_time = time.time()
+                        time.sleep(3)
             
-            if self.playing == False:
-                if self.DEBUG:
-                    print("clock noticed that self.playing is False. Exiting thread.")
-                clock_active = False
+                #if self.persistent_data['playing'] == False:
+                #    if self.DEBUG:
+                #        print("clock noticed that self.persistent_data['playing'] is False. Exiting thread.")
+                #    clock_active = False
             
+            else:
+                self.clock_active = False
             
         if self.DEBUG:
             print("CLOCK THREAD EXIT")
@@ -339,7 +357,7 @@ class InternetRadioAdapter(Adapter):
             url = self.persistent_data['current_stream_url']
             encoding = 'latin1'
             
-            if not self.playing:
+            if not self.persistent_data['playing']:
                 self.set_artist_on_thing(None)
                 self.set_song_on_thing(None)
                 return ""
@@ -611,21 +629,29 @@ class InternetRadioAdapter(Adapter):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
                 
-                if self.playing == False:
+                if self.persistent_data['playing'] == False:
                     try:
                         if hasattr(self, 't'):
                             if self.DEBUG:
-                                print("- t existed")
+                                print("- clock object already existed")
                             if self.t.is_alive():
                                 if self.DEBUG:
-                                    print("- t was still alive")
+                                    print("- Weird, clock thread was still alive")
                                 time.sleep(3)
                     except Exception as ex:
                         print("Error checking clock thread status: " + str(ex))
                             
-                    self.playing = True
+                    self.persistent_data['playing'] = True
+                            
+                else:
                     if self.DEBUG:
-                        print("self.playing has been set to true. Starting clock thread.")
+                        print("playing was already true, so this was a re-start of a borked ffplay, and the clock thread will not be started again")
+                
+                
+                if self.clock_active == False:
+                
+                    if self.DEBUG:
+                        print("self.persistent_data['playing'] has been set to true. Starting clock thread.")
                     try:
                         self.t = threading.Thread(target=self.clock)
                         self.t.daemon = True
@@ -633,9 +659,9 @@ class InternetRadioAdapter(Adapter):
                     except:
                         if self.DEBUG:
                             print("Error starting the clock thread")
-                else:
-                    if self.DEBUG:
-                        print("playing was already true, so this was a re-start of a borked ffplay, and the clock thread will not be started again")
+                        self.clock_active = False
+                
+                
                 
                 """
                 try:
@@ -653,7 +679,7 @@ class InternetRadioAdapter(Adapter):
             #  turn off
             #
             else:
-                self.playing = False
+                self.persistent_data['playing'] = False
                 self.set_status_on_thing("Stopped")
                 self.get_artist() # sets now_playing data to none on the device and UI
                 if self.player != None:

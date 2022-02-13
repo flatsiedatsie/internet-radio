@@ -108,7 +108,7 @@
 }
 
 #extension-internet-radio-stations-page .extension-internet-radio-item-action-button{
-    opacity:.3;
+    opacity:.2;
 }
 #extension-internet-radio-stations-page .extension-internet-radio-item-action-button:hover{
     opacity:1;
@@ -275,6 +275,25 @@
 }
 
 
+#extension-internet-radio-stations-list .extension-internet-radio-item-menu{
+    padding:.5rem;
+    border-left:none;
+}
+
+
+#extension-internet-radio-stations-list .extension-internet-radio-item-right{
+    position:absolute;
+    top:-1rem;
+    right:-1rem;
+}
+
+#extension-internet-radio-stations-list .extension-internet-radio-item-action-button{
+    width:2rem;
+    height:2rem;
+
+}
+
+
 #extension-internet-radio-view .extension-internet-radio-limit{
 	width: 8rem;
 	font-size: 1.8rem;
@@ -382,10 +401,7 @@
 
 #extension-internet-radio-stations-page .extension-internet-radio-item-action-button{
     background: url(/images/delete-button.png);
-}
-
-#extension-internet-radio-stations-page .extension-internet-radio-item-action-button:hover{
-    border:2px solid red;
+    background-position:center;
 }
 
 
@@ -577,6 +593,28 @@
     box-shadow: 0 1px 3px rgb(0 0 0 / 6%), 0 1px 2px rgb(0 0 0 / 12%);    
     
 }
+
+
+#extension-internet-radio-toggle-button:not(.hidden){
+    animation: extension-internet-radio-fade-in 1s;
+}
+
+#extension-internet-radio-volume-up-button:not(.hidden){
+    animation: extension-internet-radio-fade-in 1.5s;
+}
+
+#extension-internet-radio-volume-down-button:not(.hidden){
+    animation: extension-internet-radio-fade-in 2s;
+}
+
+
+
+@keyframes extension-internet-radio-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+
 /*
 #extension-internet-radio-view #extension-internet-radio-toggle-button{
     right:2rem;
@@ -744,6 +782,9 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-dow
     transform: translate(24px, 0);
   }
 }
+
+
+
 
 
 
