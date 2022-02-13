@@ -278,7 +278,7 @@ class InternetRadioAdapter(Adapter):
         #self.clock_started = True
         self.clock_active = True
         
-        while clock_active and self.running: # and self.player != None
+        while self.clock_active and self.running: # and self.player != None
             time.sleep(1)
             
             if self.persistent_data['playing'] == True:
