@@ -335,7 +335,7 @@
                                         {'action':'poll'}
 
                     		        ).then((body) => {
-                                        console.log("poll: ", body);
+                                        //console.log("poll: ", body);
                         
                                         // Playing
                                         if(typeof body.playing != 'undefined'){
