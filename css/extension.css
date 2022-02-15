@@ -120,7 +120,7 @@
     flex-wrap:wrap;
 }
 
-#extension-internet-radio-stations-list > *{
+#extension-internet-radio-stations-list > .extension-internet-radio-item{
     width: 20rem;
     min-width:40rem;
     max-width:80rem;
