@@ -174,6 +174,47 @@
 			});
 			
             
+            // Station name popup close
+			document.getElementById('extension-internet-radio-input-popup').addEventListener('click', (event) => {
+				console.log("popup clicked. event: ", event);
+				if(event.target.getAttribute('id') == 'extension-internet-radio-input-popup'){
+				    document.getElementById('extension-internet-radio-input-popup').classList.add('extension-internet-radio-hidden');
+				}
+			});
+            
+            // Station name popup save
+            document.getElementById('extension-internet-radio-station-name-save-button').addEventListener('click', (event) => {
+				//console.log("popup save button clicked. event: ", event);
+                
+                const new_name = document.getElementById('extension-internet-radio-station-name-input').value;
+                const new_url = event.target.dataset.stream_url;
+                
+                if(new_name != ""){
+    				window.API.postJson(
+    					`/extensions/${this.id}/api/ajax`,
+    					{'action':'add', 'name':new_name, 'stream_url':new_url}
+    				).then((body) => { 
+    					//console.log("add station reaction: ", body);
+                        if(body.state == 'ok'){
+                            alert("The station was saved");
+                        }
+    				}).catch((e) => {
+    					console.log("internet-radio: error in add station handler: ", e);
+    					//pre.innerText = "Could not delete that station";
+    				});
+                    
+                    document.getElementById('extension-internet-radio-station-name-input').value = "";
+                    document.getElementById('extension-internet-radio-input-popup').classList.add('extension-internet-radio-hidden');
+                }
+                else{
+                    alert("Please provide a name");
+                }
+                
+			});
+            
+            
+            
+            
             // Easter egg: add custom station
             
 			document.getElementById('extension-internet-radio-title').addEventListener('click', (event) => {
@@ -233,6 +274,7 @@
             document.getElementById('extension-internet-radio-back-button').addEventListener('click', (event) => {
                 document.getElementById('extension-internet-radio-search-page').style.display = 'none';
                 document.getElementById('extension-internet-radio-stations-page').style.display = 'block';
+                document.getElementById('extension-internet-radio-name-popup').classList.add('extension-internet-radio-hidden');
                 this.get_init_data();
                 this.searching = false;
 			});
@@ -781,27 +823,15 @@
     					add_button.addEventListener('click', (event) => {
                             //console.log("click event: ", event);
                             
-                            const new_name = prompt('Please give this station a name');
-                            const new_url = event.target.dataset.stream_url;
+                            document.getElementById('extension-internet-radio-input-popup').classList.remove('extension-internet-radio-hidden');
+                            document.getElementById('extension-internet-radio-station-name-save-button').setAttribute("data-stream_url", event.target.dataset.stream_url);
+                            
+                            //const new_name = prompt('Please give this station a name');
+                            //const new_url = event.target.dataset.stream_url;
                             
     						var target = event.currentTarget;
     						var parent3 = target.parentElement.parentElement.parentElement;
-    						parent3.classList.add("extension-internet-radio-item-added");
-    						//var parent4 = parent3.parentElement;
-    						//parent4.removeChild(parent3);
-					
-    						// Send new values to backend
-    						window.API.postJson(
-    							`/extensions/${this.id}/api/ajax`,
-    							{'action':'add', 'name':new_name, 'stream_url':new_url}
-    						).then((body) => { 
-    							//console.log("add item reaction: ", body);
-
-    						}).catch((e) => {
-    							//console.log("internet-radio: error in add items handler: ", e);
-    							//pre.innerText = "Could not delete that station";
-    						});
-					
+    						parent3.classList.add("extension-internet-radio-item-added"); // well... maybe
     				  	});
                         
                     }
