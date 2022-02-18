@@ -274,7 +274,7 @@
             document.getElementById('extension-internet-radio-back-button').addEventListener('click', (event) => {
                 document.getElementById('extension-internet-radio-search-page').style.display = 'none';
                 document.getElementById('extension-internet-radio-stations-page').style.display = 'block';
-                document.getElementById('extension-internet-radio-name-popup').classList.add('extension-internet-radio-hidden');
+                document.getElementById('extension-internet-radio-input-popup').classList.add('extension-internet-radio-hidden');
                 this.get_init_data();
                 this.searching = false;
 			});
