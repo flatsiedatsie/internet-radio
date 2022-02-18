@@ -118,7 +118,6 @@
     width: 100%;
     display:flex;
     flex-wrap:wrap;
-    align-items:center;
     justify-content:center;
 }
 
@@ -127,8 +126,8 @@
     min-width:30rem;
     max-width:80rem;
     margin:2rem;
-    flex-grow: 1;
-    flex-shrink: 1;
+    /*flex-grow: 1;
+    flex-shrink: 1;*/
     position:relative
 }
 
