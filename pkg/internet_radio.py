@@ -661,21 +661,17 @@ class InternetRadioAdapter(Adapter):
                     
                 environment = os.environ.copy()
                 
-                if sys.platform != 'darwin':
-                    for option in self.audio_controls:
-                        if self.DEBUG:
-                            print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
-                        if option['human_device_name'] == str(self.persistent_data['audio_output']):
-                            environment["ALSA_CARD"] = str(option['simple_card_name'])
-                        #else:
-                            #print("environment = " + str(environment))
                 
-                # Bluetooth: check if according to Bluetoth Pairing a bluetooth device is still connected
+                # Checking audio output option
                 
                 try:
+                    if self.DEBUG:
+                        print("self.persistent_data['audio_output']: " + str(self.persistent_data['audio_output']))
+                    
                     if self.persistent_data['audio_output'] == 'Bluetooth speaker':
                         if self.DEBUG:
                             print("Doing bluetooth speaker connection check")
+                        
                         bt_connected = False
                     
                         if self.bluetooth_device_mac != None:
@@ -713,8 +709,21 @@ class InternetRadioAdapter(Adapter):
                         if bt_connected:
                             environment["SDL_AUDIODRIVER"] = "alsa"
                             environment["AUDIODEV"] = "bluealsa:" + str(self.bluetooth_device_mac)
+                            
+                            
+                            
+                    elif sys.platform != 'darwin':
+                            for option in self.audio_controls:
+                                if self.DEBUG:
+                                    print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
+                                if option['human_device_name'] == str(self.persistent_data['audio_output']):
+                                    environment["ALSA_CARD"] = str(option['simple_card_name'])
+                                    
+                                    
+                    # TODO: provide the option to fall back to normal speakers if the bluetooth speaker is disconnected?
+                                    
                 except Exception as ex:
-                    print("Error in set_radio_state while doing bluetooth speaker checking: " + str(ex))
+                    print("Error in set_radio_state while doing audio output (bluetooth speaker) checking: " + str(ex))
                 
                         
                 kill_process('ffplay')
@@ -814,6 +823,7 @@ class InternetRadioAdapter(Adapter):
 
 
 
+    # TODO: is anything using this?
     def get_audio_volume(self):
         try:
             if sys.platform == 'darwin':
@@ -1006,40 +1016,52 @@ class InternetRadioAdapter(Adapter):
         if self.DEBUG:
             print("Setting audio output selection to: " + str(selection))
             
-        # Get the latest audio controls
-        self.audio_controls = get_audio_controls()
-        if self.DEBUG:
-            print(self.audio_controls)
-        
-        try:        
-            for option in self.audio_controls:
-                if str(option['human_device_name']) == str(selection):
-                    if self.DEBUG:
-                        print("CHANGING INTERNET RADIO AUDIO OUTPUT")
-                    # Set selection in persistence data
-                    self.persistent_data['audio_output'] = str(selection)
-                    if self.DEBUG:
-                        print("persistent_data is now: " + str(self.persistent_data))
-                    self.save_persistent_data()
-                    
-                    if self.DEBUG:
-                        print("new selection on thing: " + str(selection))
-                    try:
-                        if self.DEBUG:
-                            print("self.devices = " + str(self.devices))
-                        if self.devices['internet-radio'] != None:
-                            self.devices['internet-radio'].properties['audio output'].update( str(selection) )
-                    except Exception as ex:
-                        print("Error setting new audio output selection:" + str(ex))
-        
-                    if self.persistent_data['power']:
-                        if self.DEBUG:
-                            print("restarting radio with new audio output")
-                        self.set_radio_state(True)
-                    break
             
-        except Exception as ex:
-            print("Error in set_audio_output: " + str(ex))
+        if str(selection) == 'Bluetooth speaker':
+            self.persistent_data['audio_output'] = str(selection)
+            self.save_persistent_data()
+            if self.devices['internet-radio'] != None:
+                self.devices['internet-radio'].properties['audio output'].update( str(selection) )
+            if self.persistent_data['power']:
+                if self.DEBUG:
+                    print("restarting radio with new audio output")
+                self.set_radio_state(True)
+            
+        else:
+            # Get the latest audio controls
+            self.audio_controls = get_audio_controls()
+            if self.DEBUG:
+                print(self.audio_controls)
+        
+            try:        
+                for option in self.audio_controls:
+                    if str(option['human_device_name']) == str(selection):
+                        if self.DEBUG:
+                            print("CHANGING INTERNET RADIO AUDIO OUTPUT")
+                        # Set selection in persistence data
+                        self.persistent_data['audio_output'] = str(selection)
+                        if self.DEBUG:
+                            print("persistent_data is now: " + str(self.persistent_data))
+                        self.save_persistent_data()
+                    
+                        if self.DEBUG:
+                            print("new selection on thing: " + str(selection))
+                        try:
+                            if self.DEBUG:
+                                print("self.devices = " + str(self.devices))
+                            if self.devices['internet-radio'] != None:
+                                self.devices['internet-radio'].properties['audio output'].update( str(selection) )
+                        except Exception as ex:
+                            print("Error setting new audio output selection:" + str(ex))
+        
+                        if self.persistent_data['power']:
+                            if self.DEBUG:
+                                print("restarting radio with new audio output")
+                            self.set_radio_state(True)
+                        break
+            
+            except Exception as ex:
+                print("Error in set_audio_output: " + str(ex))
 
 
 
@@ -1308,7 +1330,7 @@ class InternetRadioProperty(Property):
 
             if self.title == 'audio output':
                 self.device.adapter.set_audio_output(str(value))
-                self.device.adapter.set_radio_state(True) # If the user changes the output, it should switch to that output.
+                #self.device.adapter.set_radio_state(True) # If the user changes the output, it should switch to that output.
 
 
         except Exception as ex:
