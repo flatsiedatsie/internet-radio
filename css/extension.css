@@ -52,21 +52,23 @@
     background-repeat: no-repeat;
     background-position: 0;
     background-image: url('../images/menu-icon.svg');
-	width:12rem;
+	width:13rem;
 	margin:0 auto;
 }
 
 
 /*  NOW PLAYING  */
 
-
-
 #extension-internet-radio-now-playing-container{
-    display:flex;
+    display:none;
     justify-content:center;
     align-items: center;
     margin-top:2rem;
 }
+.extension-internet-radio-playing #extension-internet-radio-now-playing-container{
+    display:flex;
+}
+
 
 #extension-internet-radio-now-playing{
     opacity:0;

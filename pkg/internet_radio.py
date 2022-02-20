@@ -68,6 +68,7 @@ class InternetRadioAdapter(Adapter):
         self.addon_path = os.path.join(self.user_profile['addonsDir'], self.addon_name)
         #self.persistence_file_path = os.path.join(os.path.expanduser('~'), '.mozilla-iot', 'data', self.addon_name,'persistence.json')
         self.persistence_file_path = os.path.join(self.user_profile['dataDir'], self.addon_name, 'persistence.json')
+        self.bluetooth_persistence_file_path = os.path.join(self.user_profile['dataDir'], 'bluetoothpairing', 'persistence.json')
 
         self.running = True
         self.clock_active = False
@@ -79,7 +80,11 @@ class InternetRadioAdapter(Adapter):
         self.audio_output_options = []
         self.now_playing = "" # will hold artist and song title
         self.current_stream_has_now_playing_info = True
-
+        
+        # Bluetooth
+        self.bluetooth_device_mac = None
+        self.last_bt_connection_check_time = 0
+            
         # Get audio output options
         if sys.platform != 'darwin':
             self.audio_controls = get_audio_controls()
@@ -168,6 +173,12 @@ class InternetRadioAdapter(Adapter):
                 print("Failed to start API handler (this only works on gateway version 0.10 or higher). Error: " + str(e))
 
 
+        
+        time.sleep(3)
+        
+        if self.bluetooth_device_check():
+            if self.DEBUG:
+                print("Bluetooth output device seems to be available (in theory)")
         
         # Create the radio device
         try:
@@ -263,6 +274,46 @@ class InternetRadioAdapter(Adapter):
 
 
 
+    def bluetooth_device_check(self):
+        if self.DEBUG:
+            print("checking if bluetooth speaker is connected")
+        
+        try:
+            
+            aplay_pcm_check = run_command('aplay -L')
+            if self.DEBUG:
+                print("aplay_pcm_check: " + str(aplay_pcm_check))
+                
+            if 'bluealsa' in aplay_pcm_check:
+                self.bluealsa = True
+                
+                with open(self.bluetooth_persistence_file_path) as f:
+                    self.bluetooth_persistent_data = json.load(f)
+                    if self.DEBUG:
+                        print("Bluetooth persistence data was loaded succesfully: " + str(self.bluetooth_persistent_data))
+                        
+                    if 'connected' in self.bluetooth_persistent_data:
+                        if len(self.bluetooth_persistent_data['connected']) > 0:
+                            for bluetooth_device in self.bluetooth_persistent_data['connected']:
+                                if self.DEBUG:
+                                    print("checking connected device: " + str(bluetooth_device))
+                                if "audio-card" in bluetooth_device:
+                                    if self.DEBUG:
+                                        print("bluetooth device is audio card")
+                                    self.bluetooth_device_mac = bluetooth_device['mac']
+                                    self.audio_output_options.append( "Bluetooth speaker" )
+                                    return True
+            else:
+                if self.DEBUG:
+                    print('bluealsa is not installed, bluetooth audio output is not possible')
+                                
+                        
+        except Exception as ex:
+            print("Bluetooth pairing addon check error: " + str(ex))
+            
+        self.bluetooth_device_mac = None
+        return False
+
 
 
 #
@@ -313,6 +364,10 @@ class InternetRadioAdapter(Adapter):
                         if self.DEBUG:
                             print("Error, radio unexpectedly stopped playing.")
                     
+                        # If using Bluetooth output, then a crash of ffplay may be caused by Voco killing it on purpose. In that case.. wait a while before restarting ffplay to let Voco finish speaking.
+                        if self.persistent_data['audio_output'] == 'Bluetooth speaker':
+                            time.sleep(5)
+                    
                         self.set_radio_state(True)
                     
                         """
@@ -340,9 +395,6 @@ class InternetRadioAdapter(Adapter):
             
         if self.DEBUG:
             print("CLOCK THREAD EXIT")
-
-
-
 
 
 
@@ -614,11 +666,46 @@ class InternetRadioAdapter(Adapter):
                             environment["ALSA_CARD"] = str(option['simple_card_name'])
                         #else:
                             #print("environment = " + str(environment))
-                            
+                
+                # Bluetooth: check if according to Bluetoth Pairing a bluetooth device is still connected
+                
+                try:
+                    if self.persistent_data['audio_output'] == 'Bluetooth speaker':
+                    
+                        bt_connected = False
+                    
+                        if self.bluetooth_device_mac != None:
+                        
+                            if time.time() < self.last_bt_connection_check_time + 60:
+                                bt_connected = True
+                    
+                            else:
+                                bluetooth_connection_check_output = run_command('sudo bluetoothctl info ' + str(self.bluetooth_device_mac))
+                                if 'Connected: yes' in bluetooth_connection_check_output:
+                                    self.last_bt_connection_check_time = time.time()
+                                    bt_connected = True
+                                else:
+                                    self.bluetooth_device_mac = None
+                                    self.send_pairing_prompt("The bluetooth speaker seems to be disconnected")
+                                
+                        # Find out if another speaker was paired/connected through the Bluetooth Pairing addon
+                        elif self.bluetooth_device_check():
+                            if self.bluetooth_device_mac != None:
+                                bt_connected = True
+                    
+                        if bt_connected:
+                            environment["SDL_AUDIODRIVER"] = "alsa"
+                            environment["AUDIODEV"] = "bluealsa:" + str(self.bluetooth_device_mac)
+                except Exception as ex:
+                    print("Error in set_radio_state while doing bluetooth speaker checking: " + str(ex))
+                
+                        
                 kill_process('ffplay')
                             
                 #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
                 my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit", str(self.persistent_data['current_stream_url']),"-volume",str(self.persistent_data['volume']))
+
+                
 
                 if self.DEBUG:
                     print("Internet radio addon will call this subprocess command: " + str(my_command))
@@ -1051,17 +1138,6 @@ class InternetRadioDevice(Device):
         self.radio_station_names_list = radio_station_names_list
 
         try:
-            """
-            self.properties["station"] = InternetRadioProperty(
-                            self,
-                            "station",
-                            {
-                                'title': "Station",
-                                'type': 'string',
-                                'enum': radio_station_names_list,
-                            },
-                            self.adapter.persistent_data['station'])
-            """
             
             # this will also call handle_device_added
             self.update_stations_property(False)
@@ -1123,8 +1199,7 @@ class InternetRadioDevice(Device):
 
 
 
-
-            if sys.platform != 'darwin':
+            if sys.platform != 'darwin': #darwin = Mac OS
                 if self.DEBUG:
                     print("adding audio output property with list: " + str(audio_output_list))
                 self.properties["audio output"] = InternetRadioProperty(
@@ -1139,8 +1214,6 @@ class InternetRadioDevice(Device):
                                 self.adapter.persistent_data['audio_output'])
 
 
-
-
         except Exception as ex:
             if self.DEBUG:
                 print("error adding properties: " + str(ex))
@@ -1149,7 +1222,7 @@ class InternetRadioDevice(Device):
             print("Internet Radio thing has been created.")
 
 
-
+    # Creates these options "on the fly", as radio stations get added and removed.
     def update_stations_property(self, call_handle_device_added=True):
         #print("in update_stations_property")
         # Create list of radio station names for the radio thing.
@@ -1174,6 +1247,7 @@ class InternetRadioDevice(Device):
 
         self.adapter.handle_device_added(self);
         self.notify_property_changed(self.properties["station"])
+
 
 
 #

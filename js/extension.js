@@ -218,35 +218,34 @@
             // Easter egg: add custom station
             
 			document.getElementById('extension-internet-radio-title').addEventListener('click', (event) => {
-				//console.log("send button clicked");
-                if(confirm("Would you like to add a custom radio station?")){
-                    const new_url = prompt('Please provide the URL of the stream');
-                    const new_name = prompt('Please give this station a name');
+                if(!document.body.classList.contains('kiosk')){
+                    if(confirm("Would you like to add a custom radio station?")){
+                        const new_url = prompt('Please provide the URL of the stream');
+                        const new_name = prompt('Please give this station a name');
                     
-                    if(new_name != "" && new_url.startsWith('http')){
-    					// Send new values to backend
-    					window.API.postJson(
-    						`/extensions/${this.id}/api/ajax`,
-    						{'action':'add', 'name':new_name, 'stream_url':new_url}
-    					).then((body) => { 
-    						//console.log("add item reaction: ", body);
-                            if(body.state = 'ok'){
-                                alert("The station has been added.");
-                                this.get_init_data();
-                            }else{
+                        if(new_name != "" && new_url.startsWith('http')){
+        					// Send new values to backend
+        					window.API.postJson(
+        						`/extensions/${this.id}/api/ajax`,
+        						{'action':'add', 'name':new_name, 'stream_url':new_url}
+        					).then((body) => { 
+        						//console.log("add item reaction: ", body);
+                                if(body.state = 'ok'){
+                                    alert("The station has been added.");
+                                    this.get_init_data();
+                                }else{
+                                    alert("Error: could not add station");
+                                }
+        					}).catch((e) => {
+        						//console.log("internet-radio: error in add items handler: ", e);
+        						//pre.innerText = "Could not delete that station";
                                 alert("Error: could not add station");
-                            }
-    					}).catch((e) => {
-    						//console.log("internet-radio: error in add items handler: ", e);
-    						//pre.innerText = "Could not delete that station";
-                            alert("Error: could not add station");
-    					});
+        					});
+                        }
+                        else{
+                            alert("That didn't seem right. Make sure the stream starts with http, and that you provided a name");
+                        }
                     }
-                    else{
-                        alert("That didn't seem right. Make sure the stream starts with http, and that you provided a name");
-                    }
-			
-					
                 }
 				
 			});
@@ -559,6 +558,9 @@
                                 else{
                                     //console.log("icon should show paused state (play icon)");
                                     document.body.classList.remove('extension-internet-radio-playing');
+                                    if(document.getElementById('extension-internet-radio-now-playing') != null){
+                                        document.getElementById('extension-internet-radio-now-playing').innerText = "";
+                                    }
                                 }
                                 this.get_init_data(); //update the stations to show which one is playing.
                             }
