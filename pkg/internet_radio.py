@@ -180,6 +180,9 @@ class InternetRadioAdapter(Adapter):
             if self.DEBUG:
                 print("Bluetooth output device seems to be available (in theory)")
         
+        if self.DEBUG:
+            print("complete self.audio_output_options : " + str(self.audio_output_options))
+        
         # Create the radio device
         try:
             internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list, self.audio_output_options)
@@ -301,7 +304,8 @@ class InternetRadioAdapter(Adapter):
                                     if self.DEBUG:
                                         print("bluetooth device is audio card")
                                     self.bluetooth_device_mac = bluetooth_device['mac']
-                                    self.audio_output_options.append( "Bluetooth speaker" )
+                                    if not "Bluetooth speaker" in self.audio_output_options:
+                                        self.audio_output_options.append( "Bluetooth speaker" )
                                     return True
             else:
                 if self.DEBUG:
@@ -394,7 +398,7 @@ class InternetRadioAdapter(Adapter):
                 self.clock_active = False
             
         if self.DEBUG:
-            print("CLOCK THREAD EXIT")
+            print("Internet Radio CLOCK THREAD EXIT")
 
 
 
@@ -657,7 +661,6 @@ class InternetRadioAdapter(Adapter):
                     
                 environment = os.environ.copy()
                 
-                
                 if sys.platform != 'darwin':
                     for option in self.audio_controls:
                         if self.DEBUG:
@@ -671,7 +674,8 @@ class InternetRadioAdapter(Adapter):
                 
                 try:
                     if self.persistent_data['audio_output'] == 'Bluetooth speaker':
-                    
+                        if self.DEBUG:
+                            print("Doing bluetooth speaker connection check")
                         bt_connected = False
                     
                         if self.bluetooth_device_mac != None:
@@ -681,17 +685,30 @@ class InternetRadioAdapter(Adapter):
                     
                             else:
                                 bluetooth_connection_check_output = run_command('sudo bluetoothctl info ' + str(self.bluetooth_device_mac))
+                                if self.DEBUG:
+                                    print("bluetooth_connection_check_output: " + str(bluetooth_connection_check_output))
                                 if 'Connected: yes' in bluetooth_connection_check_output:
                                     self.last_bt_connection_check_time = time.time()
                                     bt_connected = True
+                                    if self.DEBUG:
+                                        print("bluetooth speaker seems to be connected")
                                 else:
                                     self.bluetooth_device_mac = None
                                     self.send_pairing_prompt("The bluetooth speaker seems to be disconnected")
+                                    if self.DEBUG:
+                                        print("bluetooth speaker seems to be disconnected")
                                 
                         # Find out if another speaker was paired/connected through the Bluetooth Pairing addon
-                        elif self.bluetooth_device_check():
-                            if self.bluetooth_device_mac != None:
-                                bt_connected = True
+                        else:
+                            if self.DEBUG:
+                                print("Bluetooth device mac was None. Doing bluetooth_device_check")
+                            if self.bluetooth_device_check():
+                                if self.bluetooth_device_mac != None:
+                                    bt_connected = True
+                            else:
+                                self.send_pairing_prompt("Please (re)connect a Bluetooth speaker using the Bluetooth pairing addon")
+                                if self.DEBUG:
+                                    print("bluetooth_device_check: no connected speakers?")
                     
                         if bt_connected:
                             environment["SDL_AUDIODRIVER"] = "alsa"
@@ -1291,7 +1308,7 @@ class InternetRadioProperty(Property):
 
             if self.title == 'audio output':
                 self.device.adapter.set_audio_output(str(value))
-
+                self.device.adapter.set_radio_state(True) # If the user changes the output, it should switch to that output.
 
 
         except Exception as ex:
