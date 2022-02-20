@@ -731,21 +731,33 @@ class InternetRadioAdapter(Adapter):
                 kill_process('ffplay')
                            
                 if bt_connected:
-                    my_command = ('SDL_AUDIODRIVER="alsa"','AUDIODEV="bluealsa:DEV=' + self.bluetooth_device_mac + '"','ffplay', '-nodisp', '-vn', '-infbuf','-autoexit', str(self.persistent_data['current_stream_url']),'-volume',str(self.persistent_data['volume']))
+                    my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.bluetooth_device_mac) + " ffplay -nodisp -vn -infbuf -autoexit " + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
+                    
+                    if self.DEBUG:
+                        print("Internet radio addon will call this subprocess command: " + str(my_command))
+                        print("starting ffplay...")
+                    self.player = subprocess.Popen(my_command, 
+                                    env=environment,
+                                    shell=True,
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+                
+                
                 else:
                     #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
                     my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit", str(self.persistent_data['current_stream_url']),"-volume",str(self.persistent_data['volume']))
 
                 
 
-                if self.DEBUG:
-                    print("Internet radio addon will call this subprocess command: " + str(my_command))
-                    print("starting ffplay...")
-                self.player = subprocess.Popen(my_command, 
-                                env=environment,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
+                    if self.DEBUG:
+                        print("Internet radio addon will call this subprocess command: " + str(my_command))
+                        print("starting ffplay...")
+                    self.player = subprocess.Popen(my_command, 
+                                    env=environment,
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
                 
                 if self.persistent_data['playing'] == False:
                     try:
@@ -802,6 +814,7 @@ class InternetRadioAdapter(Adapter):
                 self.get_artist() # sets now_playing data to none on the device and UI
                 if self.player != None:
                     self.player.terminate()
+                    os.system('pkill ffplay')
                 
                 else:
                     if self.DEBUG:
