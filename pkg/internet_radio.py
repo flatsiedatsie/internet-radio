@@ -664,6 +664,8 @@ class InternetRadioAdapter(Adapter):
                 
                 # Checking audio output option
                 
+                bt_connected = False
+                
                 try:
                     if self.DEBUG:
                         print("self.persistent_data['audio_output']: " + str(self.persistent_data['audio_output']))
@@ -672,7 +674,7 @@ class InternetRadioAdapter(Adapter):
                         if self.DEBUG:
                             print("Doing bluetooth speaker connection check")
                         
-                        bt_connected = False
+                        
                     
                         if self.bluetooth_device_mac != None:
                         
@@ -727,9 +729,12 @@ class InternetRadioAdapter(Adapter):
                 
                         
                 kill_process('ffplay')
-                            
-                #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
-                my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit", str(self.persistent_data['current_stream_url']),"-volume",str(self.persistent_data['volume']))
+                           
+                if bt_connected:
+                    my_command = ('SDL_AUDIODRIVER="alsa"','AUDIODEV="bluealsa:DEV=' + self.bluetooth_device_mac + '"','ffplay', '-nodisp', '-vn', '-infbuf','-autoexit', str(self.persistent_data['current_stream_url']),'-volume',str(self.persistent_data['volume']))
+                else:
+                    #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
+                    my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit", str(self.persistent_data['current_stream_url']),"-volume",str(self.persistent_data['volume']))
 
                 
 
