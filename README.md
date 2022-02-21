@@ -14,4 +14,4 @@ It uses persistence to remember the previous state (e.g. selected radio station,
 You will need to have `ffmpeg` installed on your system, if it isn't already.
 Additionally, on Linux, you will need `alsa-utils` installed.
 
-The Bluetooth functonality only works with the Candle image
+The Bluetooth functonality only works is Bluealsa is installed.
