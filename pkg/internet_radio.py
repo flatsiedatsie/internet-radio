@@ -709,8 +709,10 @@ class InternetRadioAdapter(Adapter):
                                     print("bluetooth_device_check: no connected speakers?")
                     
                         if bt_connected:
-                            environment["SDL_AUDIODRIVER"] = "alsa"
-                            environment["AUDIODEV"] = "bluealsa:" + str(self.bluetooth_device_mac)
+                            if self.DEBUG:
+                                print("Bluetooth speaker seems to be connected")
+                            #environment["SDL_AUDIODRIVER"] = "alsa"
+                            #environment["AUDIODEV"] = "bluealsa:" + str(self.bluetooth_device_mac)
                             
                             
                             
@@ -730,8 +732,15 @@ class InternetRadioAdapter(Adapter):
                         
                 kill_process('ffplay')
                            
+                # Streaming to bluetooth seems to only work if shell is true. The position of the volume string also seemed to matter
                 if bt_connected:
-                    my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.bluetooth_device_mac) + " ffplay -nodisp -vn -infbuf -autoexit " + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
+                    
+                    environment["SDL_AUDIODRIVER"] = "alsa"
+                    environment["AUDIODEV"] = "bluealsa:" + str(self.bluetooth_device_mac)
+                    
+                    #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.bluetooth_device_mac) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
+                    my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
+                    
                     
                     if self.DEBUG:
                         print("Internet radio addon will call this subprocess command: " + str(my_command))
@@ -746,7 +755,7 @@ class InternetRadioAdapter(Adapter):
                 
                 else:
                     #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
-                    my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit", str(self.persistent_data['current_stream_url']),"-volume",str(self.persistent_data['volume']))
+                    my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit","-volume",str(self.persistent_data['volume']), str(self.persistent_data['current_stream_url']) )
 
                 
 

@@ -2,10 +2,9 @@
 	class InternetRadio extends window.Extension {
 	    constructor() {
 	      	super('internet-radio');
-			//console.log("Adding internet-radio addon to menu");
+			console.log("Adding internet-radio addon to menu");
       		
 			this.addMenuEntry('Internet radio');
-			
             
             //var getCountryNames = new Intl.DisplayNames(['en'], {type: 'region'});
             //console.log(getCountryNames);
