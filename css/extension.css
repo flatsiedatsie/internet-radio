@@ -519,6 +519,12 @@
 	left:2rem;
     z-index:998;
 }
+
+
+.extension-internet-radio-volume-hidden{
+    display:none;
+}
+
 /*
 body.zoom1 #extension-internet-radio-volume-down-button,
 body.zoom2 #extension-internet-radio-volume-down-button{

@@ -1,5 +1,5 @@
 {
-  "author": "Flatsiedatsie",
+  "author": "CandleSmartHome.com",
   "description": "internet radio player. Allows you to search for and store your favourite stations.",
   "content_scripts": [
     {
@@ -45,7 +45,7 @@
     }
   },
   "short_name": "Radio",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "web_accessible_resources": [
     "css/*.css",
     "images/*.svg",

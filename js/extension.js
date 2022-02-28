@@ -2,7 +2,7 @@
 	class InternetRadio extends window.Extension {
 	    constructor() {
 	      	super('internet-radio');
-			console.log("Adding internet-radio addon to menu");
+			//console.log("Adding internet-radio addon to menu");
       		
 			this.addMenuEntry('Internet radio');
             
@@ -75,7 +75,7 @@
 				
 			}
 			catch(e){
-				console.log("internet radio: no interval to clear? " + e);
+				//console.log("internet radio: no interval to clear? " + e);
 			}    
 		}
         
@@ -92,14 +92,14 @@
 			catch(e){
 				//console.log("no interval to clear?: " + e);
 			}
-			
+            
+            
 			const main_view = document.getElementById('extension-internet-radio-view');
 			
 			if(this.content == ''){
 				return;
 			}
 			else{
-				//document.getElementById('extension-internet-radio-view')#extension-internet-radio-view
 				main_view.innerHTML = this.content;
 			}
 			
@@ -109,51 +109,12 @@
 			const list = document.getElementById('extension-internet-radio-list');
 		
 			const pre = document.getElementById('extension-internet-radio-response-data');
-			//const text_input_field = document.getElementById('extension-internet-radio-text-input-field');
-			//const text_response_container = document.getElementById('extension-internet-radio-text-response-container');
-			//const text_response_field = document.getElementById('extension-internet-radio-text-response-field');
-			//text_response_container.style.display = 'none';
-			
             
             // Copy to clipboard
 			const now_playing_element = document.getElementById('extension-internet-radio-now-playing');
             document.getElementById('extension-internet-radio-now-playing').addEventListener('click', (event) => {
                 //console.log("copy?");
                 this.clip('extension-internet-radio-now-playing'); 
-
-                //console.log("copying to clipboard from: ", now_playing_element);
-			    /*
-                now_playing_element.select();
-                now_playing_element.setSelectionRange(0, 99999);
-                navigator.clipboard.writeText(now_playing_element.innerText);
-                alert("Copied to clipboard: " + now_playing_element.innerText); 
-                */
-                //let copyTextarea = document.querySelector('#copytextarea');
-                /*
-                now_playing_element.focus();
-                now_playing_element.select();
-                try {
-                  let successful = document.execCommand('copy');
-                  if(succesful){
-                      alert('Copied song name to clipboard');
-                  }
-                  //let msg = successful ? 'successful' : 'unsuccessful';
-                  //alert('Copy text command was ' + msg);
-                } catch(err) {
-                    //console.log('Also unable to copy with execCommand');
-                }
-                */
-                /*
-                let text = now_playing_element.innerText;
-                navigator.clipboard.writeText(text)
-                  .then(() => {
-                      alert('Copied song name to clipboard');
-                  })
-                  .catch(err => {
-                      //console.log('Unable to copy with navigator.clipboard');
-                      
-                  });
-                */
                 
 			});
             
@@ -279,31 +240,11 @@
             
             
         
-		    
-		    
-			// TABS
-            /*
-			document.getElementById('extension-internet-radio-tab-button-timers').addEventListener('click', (event) => {
-				//console.log(event);
-				document.getElementById('extension-internet-radio-content').classList = ['extension-internet-radio-show-tab-timers'];
-			});
-			document.getElementById('extension-internet-radio-tab-button-satellites').addEventListener('click', (event) => {
-				document.getElementById('extension-internet-radio-content').classList = ['extension-internet-radio-show-tab-satellites'];
-			});
-			document.getElementById('extension-internet-radio-tab-button-tutorial').addEventListener('click', (event) => {
-				document.getElementById('extension-internet-radio-content').classList = ['extension-internet-radio-show-tab-tutorial'];
-			});
-            */
-            
-			
-            
-            
             this.get_init_data();
-            
-            
 		}
 		
 	
+    
         get_init_data(regenerate){
             
             if(typeof regenerate == 'undefined'){
@@ -320,20 +261,22 @@
 
 		        ).then((body) => {
                     
-                    
                     if(typeof body.debug != 'undefined'){
-                        if(body.debug){
-                            this.debug = body.debug;
+                        this.debug = body.debug;
+                        if(body.debug == true){
+                            console.log("Internet radio Init API result: ", body);
                             if(document.getElementById('extension-internet-radio-debug-warning') != null){
                                 document.getElementById('extension-internet-radio-debug-warning').style.display = 'block';
                             }
                         }
-                        this.debug = body.debug;
                     }
                     
-                    
-					if(this.debug){
-                        console.log("Internet radio Init API result: ", body);
+                    if(typeof body.volume != 'undefined'){
+                        if(body.volume == 0){
+                            if(document.getElementById('extension-internet-radio-volume-down-button') != null){
+                                document.getElementById('extension-internet-radio-volume-down-button').classList.add('extension-internet-radio-volume-hidden');
+                            }
+                        }
                     }
                     
                     this.station = body.station;
@@ -379,19 +322,21 @@
                         
                                         // Playing
                                         if(typeof body.playing != 'undefined'){
+                                            this.playing = body.playing;
                                             if(body.playing){
-                                                this.playing = true;
                                                 document.body.classList.add('extension-internet-radio-playing');
                                             }
                                             else{
                                                 document.body.classList.remove('extension-internet-radio-playing');
-                                                this.playing = false;
                                                 if(now_playing_element != null){
                                                     now_playing_element.innerText = '';
                                                 }
                                                 
                                             }
-                                            document.getElementById('extension-internet-radio-toggle-button').classList.remove('hidden');
+                                            if(document.getElementById('extension-internet-radio-toggle-button') != null){
+                                                document.getElementById('extension-internet-radio-toggle-button').classList.remove('hidden');
+                                            }
+                                            
                                         }
                         
                                         // Now_playing
@@ -422,7 +367,7 @@
                                         }
                     
                     		        }).catch((e) => {
-                    		  			console.log("Error polling: " + e.toString());
+                    		  			console.log("Error polling: ", e);
                     		        });
                     
                                 }
@@ -446,7 +391,7 @@
 				
 			}
 			catch(e){
-				console.log("Error in API call to init: " + e);
+				console.log("Error in API call to init: ", e);
 			}
         }
     
@@ -488,17 +433,13 @@
         					//console.log("Volume down result:");
         					//console.log(body);
                             if(body.volume == 0){
-                                document.getElementById('extension-internet-radio-volume-down-button').style.display = 'none';
+                                document.getElementById('extension-internet-radio-volume-down-button').classList.add('extension-internet-radio-volume-hidden');
                             }
 				
         		        }).catch((e) => {
         		  			console.log("Error lowering radio volume: " + e.toString());
         		        });	
         			});
-                
-                }
-                else{
-                    //console.log("volume down button already existed");
                 }
             
                 if(document.getElementById('extension-internet-radio-volume-up-button') == null){
@@ -520,16 +461,12 @@
         		        ).then((body) => {
         					//console.log("Volume up result:");
         					//console.log(body);
-                            document.getElementById('extension-internet-radio-volume-down-button').style.display = 'block';
+                            document.getElementById('extension-internet-radio-volume-down-button').classList.remove('extension-internet-radio-volume-hidden');
                         
         		        }).catch((e) => {
-        		  			console.log("Error raising radio volume: " + e.toString());
+        		  			console.log("Error raising radio volume: ",e);
         		        });	
-        			}); 
-                
-                }
-                else{
-                    //console.log("volume up button already existed");
+        			});
                 }
             
                 if(document.getElementById('extension-internet-radio-toggle-button') == null){
@@ -568,12 +505,7 @@
         		  			console.log("Error toggling radio: ", e);
         		        });	
                     });
-                
-                
                     target_to_attach_buttons_to.append(toggle_button);
-                }
-                else{
-                    //console.log("radio toggle button already existed");
                 }
             
 
@@ -584,11 +516,6 @@
                 console.log("internet radio: add volume and toggle buttons error: ", e);
             }
             
-            
-            
-            // Play/Pause toggle
-            //document.getElementById('extension-internet-radio-toggle-button')
-
             
         }
     
