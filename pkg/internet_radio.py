@@ -82,7 +82,6 @@ class InternetRadioAdapter(Adapter):
         self.current_stream_has_now_playing_info = True
         
         # Bluetooth
-        self.bluetooth_device_mac = None
         self.last_bt_connection_check_time = 0
             
         # Get audio output options
@@ -134,16 +133,14 @@ class InternetRadioAdapter(Adapter):
                     
                     
         except:
-            print("Could not load persistent data (if you just installed the add-on then this is normal)")
+            if self.DEBUG:
+                print("Could not load persistent data (if you just installed the add-on then this is normal)")
             if len(self.audio_output_options) > 0:
                 self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output': str(self.audio_controls[0]['human_device_name']), 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
             else:
                 self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output': "", 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
 
 
-
-
-            
 
         # LOAD CONFIG
 
@@ -158,6 +155,10 @@ class InternetRadioAdapter(Adapter):
 
         if 'playing' not in self.persistent_data:
             self.persistent_data['playing'] = False
+
+
+        if 'bluetooth_device_mac' not in self.persistent_data:
+            self.persistent_data['bluetooth_device_mac'] = None
 
 
         # Start the API handler
@@ -245,25 +246,26 @@ class InternetRadioAdapter(Adapter):
             print("Error. Failed to open settings database. Closing proxy.")
             self.close_proxy()
 
-        if not config:
-            return
-
-        if 'Debugging' in config:
-            #print("-Debugging was in config")
-            self.DEBUG = bool(config['Debugging'])
-            if self.DEBUG:
-                print("Debugging enabled")
-
-        if 'Show buttons everywhere' in config:
-            #print("-Debugging was in config")
-            self.show_buttons_everywhere = bool(config['Show buttons everywhere'])
-            if self.DEBUG:
-                print("Show buttons everywhere preference was in config: " + str(self.show_buttons_everywhere))
-
-        if self.DEBUG:
-            print(str(config))
-
         try:
+            if not config:
+                return
+
+            if 'Debugging' in config:
+                #print("-Debugging was in config")
+                self.DEBUG = bool(config['Debugging'])
+                if self.DEBUG:
+                    print("Debugging enabled")
+
+            if 'Show buttons everywhere' in config:
+                #print("-Debugging was in config")
+                self.show_buttons_everywhere = bool(config['Show buttons everywhere'])
+                if self.DEBUG:
+                    print("Show buttons everywhere preference was in config: " + str(self.show_buttons_everywhere))
+
+            if self.DEBUG:
+                print(str(config))
+
+            
             if 'Radio stations' in config and len(self.persistent_data['stations']) == 0:
                 self.persistent_data['stations'] = config['Radio stations']
                 #self.persistent_data['stations'] = config['Radio stations']
@@ -289,28 +291,36 @@ class InternetRadioAdapter(Adapter):
                 self.bluealsa = True
                 if self.DEBUG:
                     print("BlueAlsa was detected as PCM option")
+                    
+                if self.persistent_data['bluetooth_device_mac'] != None:
+                    bluetooth_check = run_command('sudo bluetoothctl info ' + self.persistent_data['bluetooth_device_mac'])
+                    if 'Icon: audio-card' in bluetooth_check and 'Connected: yes' in bluetooth_check:
+                        return True
+
+                # if the current mac wasn't connected, check with the Bluetooth Pairing addon for updated information.
                 with open(self.bluetooth_persistence_file_path) as f:
                     self.bluetooth_persistent_data = json.load(f)
                     if self.DEBUG:
                         print("Bluetooth persistence data was loaded succesfully: " + str(self.bluetooth_persistent_data))
-                        
-                    if 'connected' in self.bluetooth_persistent_data:
+                    
+                    if 'connected' in self.bluetooth_persistent_data: # grab the first connected speaker we find
                         if len(self.bluetooth_persistent_data['connected']) > 0:
                             for bluetooth_device in self.bluetooth_persistent_data['connected']:
                                 if self.DEBUG:
                                     print("checking connected device: " + str(bluetooth_device))
-                                if "type" in bluetooth_device:
+                                if "type" in bluetooth_device and "address" in bluetooth_device:
                                     if bluetooth_device['type'] == 'audio-card':
                                         if self.DEBUG:
                                             print("bluetooth device is audio card")
-                                        self.bluetooth_device_mac = bluetooth_device['mac']
+                                        self.persistent_data['bluetooth_device_mac'] = bluetooth_device['address']
+                                        self.save_persistent_data()
                                         if not "Bluetooth speaker" in self.audio_output_options:
                                             self.audio_output_options.append( "Bluetooth speaker" )
                                         return True
                         else:
                             if self.DEBUG:
                                 print("No connected devices found in persistent data from bluetooth pairing addon")
-                            
+                
             else:
                 if self.DEBUG:
                     print('bluealsa is not installed, bluetooth audio output is not possible')
@@ -319,7 +329,7 @@ class InternetRadioAdapter(Adapter):
         except Exception as ex:
             print("Bluetooth pairing addon check error: " + str(ex))
             
-        self.bluetooth_device_mac = None
+        self.persistent_data['bluetooth_device_mac'] = None
         return False
 
 
@@ -680,13 +690,13 @@ class InternetRadioAdapter(Adapter):
                         
                         
                     
-                        if self.bluetooth_device_mac != None:
+                        if self.persistent_data['bluetooth_device_mac'] != None:
                         
                             if time.time() < self.last_bt_connection_check_time + 60:
                                 bt_connected = True
                     
                             else:
-                                bluetooth_connection_check_output = run_command('sudo bluetoothctl info ' + str(self.bluetooth_device_mac))
+                                bluetooth_connection_check_output = run_command('sudo bluetoothctl info ' + str(self.persistent_data['bluetooth_device_mac']))
                                 if self.DEBUG:
                                     print("bluetooth_connection_check_output: " + str(bluetooth_connection_check_output))
                                 if 'Connected: yes' in bluetooth_connection_check_output:
@@ -695,7 +705,7 @@ class InternetRadioAdapter(Adapter):
                                     if self.DEBUG:
                                         print("bluetooth speaker seems to be connected")
                                 else:
-                                    self.bluetooth_device_mac = None
+                                    self.persistent_data['bluetooth_device_mac'] = None
                                     self.send_pairing_prompt("The bluetooth speaker seems to be disconnected")
                                     if self.DEBUG:
                                         print("bluetooth speaker seems to be disconnected")
@@ -705,7 +715,7 @@ class InternetRadioAdapter(Adapter):
                             if self.DEBUG:
                                 print("Bluetooth device mac was None. Doing bluetooth_device_check")
                             if self.bluetooth_device_check():
-                                if self.bluetooth_device_mac != None:
+                                if self.persistent_data['bluetooth_device_mac'] != None:
                                     bt_connected = True
                             else:
                                 self.send_pairing_prompt("Please (re)connect a Bluetooth speaker using the Bluetooth pairing addon")
@@ -716,7 +726,7 @@ class InternetRadioAdapter(Adapter):
                             if self.DEBUG:
                                 print("Bluetooth speaker seems to be connected")
                             #environment["SDL_AUDIODRIVER"] = "alsa"
-                            #environment["AUDIODEV"] = "bluealsa:" + str(self.bluetooth_device_mac)
+                            #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
                             
                             
                             
@@ -740,9 +750,9 @@ class InternetRadioAdapter(Adapter):
                 if bt_connected:
                     
                     environment["SDL_AUDIODRIVER"] = "alsa"
-                    environment["AUDIODEV"] = "bluealsa:" + str(self.bluetooth_device_mac)
+                    environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
                     
-                    #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.bluetooth_device_mac) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
+                    #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.persistent_data['bluetooth_device_mac']) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
                     my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
                     
                     
