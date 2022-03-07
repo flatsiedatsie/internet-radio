@@ -174,7 +174,7 @@ class InternetRadioAdapter(Adapter):
 
 
         
-        time.sleep(3)
+        time.sleep(5)
         
         if self.bluetooth_device_check():
             if self.DEBUG:
@@ -242,7 +242,7 @@ class InternetRadioAdapter(Adapter):
             database.close()
 
         except:
-            print("Error. Failed to open settings database.")
+            print("Error. Failed to open settings database. Closing proxy.")
             self.close_proxy()
 
         if not config:
@@ -259,8 +259,6 @@ class InternetRadioAdapter(Adapter):
             self.show_buttons_everywhere = bool(config['Show buttons everywhere'])
             if self.DEBUG:
                 print("Show buttons everywhere preference was in config: " + str(self.show_buttons_everywhere))
-
-        
 
         if self.DEBUG:
             print(str(config))
@@ -289,7 +287,8 @@ class InternetRadioAdapter(Adapter):
                 
             if 'bluealsa' in aplay_pcm_check:
                 self.bluealsa = True
-                
+                if self.DEBUG:
+                    print("BlueAlsa was detected as PCM option")
                 with open(self.bluetooth_persistence_file_path) as f:
                     self.bluetooth_persistent_data = json.load(f)
                     if self.DEBUG:
@@ -300,13 +299,18 @@ class InternetRadioAdapter(Adapter):
                             for bluetooth_device in self.bluetooth_persistent_data['connected']:
                                 if self.DEBUG:
                                     print("checking connected device: " + str(bluetooth_device))
-                                if "audio-card" in bluetooth_device:
-                                    if self.DEBUG:
-                                        print("bluetooth device is audio card")
-                                    self.bluetooth_device_mac = bluetooth_device['mac']
-                                    if not "Bluetooth speaker" in self.audio_output_options:
-                                        self.audio_output_options.append( "Bluetooth speaker" )
-                                    return True
+                                if "type" in bluetooth_device:
+                                    if bluetooth_device['type'] == 'audio-card':
+                                        if self.DEBUG:
+                                            print("bluetooth device is audio card")
+                                        self.bluetooth_device_mac = bluetooth_device['mac']
+                                        if not "Bluetooth speaker" in self.audio_output_options:
+                                            self.audio_output_options.append( "Bluetooth speaker" )
+                                        return True
+                        else:
+                            if self.DEBUG:
+                                print("No connected devices found in persistent data from bluetooth pairing addon")
+                            
             else:
                 if self.DEBUG:
                     print('bluealsa is not installed, bluetooth audio output is not possible')

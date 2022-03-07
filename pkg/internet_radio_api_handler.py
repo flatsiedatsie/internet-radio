@@ -95,7 +95,7 @@ class InternetRadioAPIHandler(APIHandler):
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'playing' : self.adapter.persistent_data['playing'], 'debug': self.adapter.DEBUG, 'stations':self.adapter.persistent_data['stations'], 'station':self.adapter.persistent_data['station'], 'show_buttons_everywhere':self.adapter.show_buttons_everywhere}),
+                          content=json.dumps({'playing' : self.adapter.persistent_data['playing'], 'volume':self.adapter.persistent_data['volume'], 'debug': self.adapter.DEBUG, 'stations':self.adapter.persistent_data['stations'], 'station':self.adapter.persistent_data['station'], 'show_buttons_everywhere':self.adapter.show_buttons_everywhere}),
                         )
                         
                     elif action == 'poll':

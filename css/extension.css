@@ -399,17 +399,17 @@
 /*  BUTTONS  */
 
 
-
-#extension-internet-radio-back-button{
-    top: 2rem;
-    left: 2rem;
+#extension-internet-radio-back-button-container{
+    top: 0rem;
+    left: 0rem;
     position: fixed;
-    top:2rem;
-    left:2rem;
-    width: 5.6rem;
-    height: 5.6rem;
+    padding: 2rem 0 0 2rem;
+    width: 7.6rem;
+    height: 7.6rem;
+    z-index: 1000;
+}
+#extension-internet-radio-back-button{
     border-radius: 2.8rem;
-    padding: 0;
     background-color: #5d9bc7;
     border: none;
     background-size: cover;
@@ -419,12 +419,12 @@
     -ms-user-select: none;
     user-select: none;
     outline: 0;
-    z-index: 1000;
     cursor: default;
     overflow:hidden;
     opacity:1;
     cursor:pointer;
     background: #5d9bc7 no-repeat center/100% url(/images/back.png);
+    background-size:5.6rem;
     box-shadow: 0 1px 3px rgb(0 0 0 / 6%), 0 1px 2px rgb(0 0 0 / 12%);
 }
 #extension-internet-radio-back-button:hover{

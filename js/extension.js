@@ -230,7 +230,7 @@
 			});
 				
             // Back button
-            document.getElementById('extension-internet-radio-back-button').addEventListener('click', (event) => {
+            document.getElementById('extension-internet-radio-back-button-container').addEventListener('click', (event) => {
                 document.getElementById('extension-internet-radio-search-page').style.display = 'none';
                 document.getElementById('extension-internet-radio-stations-page').style.display = 'block';
                 document.getElementById('extension-internet-radio-input-popup').classList.add('extension-internet-radio-hidden');
