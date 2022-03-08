@@ -174,8 +174,9 @@ class InternetRadioAdapter(Adapter):
                 print("Failed to start API handler (this only works on gateway version 0.10 or higher). Error: " + str(e))
 
 
-        
-        time.sleep(5)
+        # Give Bluetooth Pairing addon some time to reconnect to the speaker
+        if self.persistent_data['bluetooth_device_mac'] != None:
+            time.sleep(15)
         
         if self.bluetooth_device_check():
             if self.DEBUG:
@@ -330,6 +331,7 @@ class InternetRadioAdapter(Adapter):
             print("Bluetooth pairing addon check error: " + str(ex))
             
         self.persistent_data['bluetooth_device_mac'] = None
+        #self.save_persistent_data()
         return False
 
 
@@ -703,7 +705,7 @@ class InternetRadioAdapter(Adapter):
                                     self.last_bt_connection_check_time = time.time()
                                     bt_connected = True
                                     if self.DEBUG:
-                                        print("bluetooth speaker seems to be connected")
+                                        print("Connected: yes spotted. (Bluetooth speaker seems to be connected)")
                                 else:
                                     self.persistent_data['bluetooth_device_mac'] = None
                                     self.send_pairing_prompt("The bluetooth speaker seems to be disconnected")
