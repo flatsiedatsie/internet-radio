@@ -701,27 +701,10 @@ class InternetRadioAdapter(Adapter):
                             print("Doing bluetooth speaker connection check")
                         
                         
+                        bluetooth_connection_check_output = run_command('amixer -D bluealsa scontents')
+                        if len(bluetooth_connection_check_output) > 10:
+                            bt_connected = True
                     
-                        if self.persistent_data['bluetooth_device_mac'] != None:
-                        
-                            if time.time() < self.last_bt_connection_check_time + 60:
-                                bt_connected = True
-                    
-                            else:
-                                bluetooth_connection_check_output = run_command('sudo bluetoothctl info ' + str(self.persistent_data['bluetooth_device_mac']))
-                                if self.DEBUG:
-                                    print("bluetooth_connection_check_output: " + str(bluetooth_connection_check_output))
-                                if 'Connected: yes' in bluetooth_connection_check_output:
-                                    self.last_bt_connection_check_time = time.time()
-                                    bt_connected = True
-                                    if self.DEBUG:
-                                        print("Connected: yes spotted. (Bluetooth speaker seems to be connected)")
-                                else:
-                                    self.persistent_data['bluetooth_device_mac'] = None
-                                    self.send_pairing_prompt("The bluetooth speaker seems to be disconnected")
-                                    if self.DEBUG:
-                                        print("bluetooth speaker seems to be disconnected")
-                                
                         # Find out if another speaker was paired/connected through the Bluetooth Pairing addon
                         else:
                             if self.DEBUG:
@@ -762,7 +745,8 @@ class InternetRadioAdapter(Adapter):
                 if bt_connected:
                     
                     environment["SDL_AUDIODRIVER"] = "alsa"
-                    environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
+                    #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
+                    environment["AUDIODEV"] = "bluealsa:00:00:00:00:00:00"
                     
                     #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.persistent_data['bluetooth_device_mac']) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
                     my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
@@ -1450,7 +1434,8 @@ def get_audio_controls():
             # Raspberry Pi 4
             human_device_name = human_device_name.replace("bcm2835 ALSA","Built-in headphone jack")
             human_device_name = human_device_name.replace("bcm2835 IEC958/HDMI","Built-in video")
-            human_device_name = human_device_name.replace("bcm2835 IEC958/HDMI1","Built-in video two")
+            human_device_name = human_device_name.replace("bcm2835 IEC958/HDMI1","Built-in video (two)")
+            human_device_name = human_device_name.replace("bcm2835 IEC958/HDMI 1","Built-in video (two)")
             
             # Raspberry Pi 3
             human_device_name = human_device_name.replace("bcm2835 Headphones","Built-in headphone jack")
