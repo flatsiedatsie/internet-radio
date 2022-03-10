@@ -83,6 +83,14 @@ class InternetRadioAdapter(Adapter):
         
         # Bluetooth
         self.last_bt_connection_check_time = 0
+        self.bluealsa_available = False
+        try:
+            bluealsa_check_output = run_command('aplay -L')
+            if 'bluealsa' in bluealsa_check_output:
+                self.bluealsa_available = True
+        except Exception as ex:
+            print("error checking for bluealsa: " + str(ex))
+            
             
         # Get audio output options
         if sys.platform != 'darwin':
@@ -93,7 +101,9 @@ class InternetRadioAdapter(Adapter):
             for option in self.audio_controls:
                 self.audio_output_options.append( option['human_device_name'] )
 
-
+            if self.bluealsa_available:
+                self.audio_output_options.append( "Bluetooth speaker" )
+                
 
         # Get persistent data
         try:
