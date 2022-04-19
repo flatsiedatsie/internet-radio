@@ -115,7 +115,7 @@ class InternetRadioAdapter(Adapter):
                     if 'audio_output' not in self.persistent_data:
                         if self.DEBUG:
                             print("audio output was not in persistent data, adding it now.")
-                        if len(self.audio_output_options) > 0:
+                        if len(self.audio_controls) > 0:
                             self.persistent_data['audio_output'] = str(self.audio_controls[0]['human_device_name'])
                         else:
                             self.persistent_data['audio_output'] = ""
@@ -145,11 +145,16 @@ class InternetRadioAdapter(Adapter):
         except:
             if self.DEBUG:
                 print("Could not load persistent data (if you just installed the add-on then this is normal)")
-            if len(self.audio_output_options) > 0:
-                self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output': str(self.audio_controls[0]['human_device_name']), 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
-            else:
+            try:
+                first_audio_output = ""
+                if len(self.audio_controls) > 0:
+                    if 'human_device_name' in self.audio_controls[0]
+                        first_audio_output = self.audio_controls[0]['human_device_name']
+                self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output':  first_audio_output, 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
+            
+            except Exception as ex:
+                print("Error in handling missing persistent data file: " + str(ex))
                 self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output': "", 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
-
 
 
         # LOAD CONFIG
