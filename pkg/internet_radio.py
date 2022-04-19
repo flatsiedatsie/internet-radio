@@ -148,7 +148,7 @@ class InternetRadioAdapter(Adapter):
             try:
                 first_audio_output = ""
                 if len(self.audio_controls) > 0:
-                    if 'human_device_name' in self.audio_controls[0]
+                    if 'human_device_name' in self.audio_controls[0]:
                         first_audio_output = self.audio_controls[0]['human_device_name']
                 self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output':  first_audio_output, 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
             
@@ -384,46 +384,47 @@ class InternetRadioAdapter(Adapter):
             
                 #print("playing")
                 # Wait until process terminates (without using p.wait())
-                poll_result = self.player.poll()
-                if poll_result is None:
-                    #print("playing")
-                    pass
-                else:
-                    time.sleep(1)
-                    #print("poll_result: " + str(poll_result))
-                    # Get return code from process
-                    return_code = self.player.returncode
-                    if self.DEBUG:
-                        print("clock: self.player process polling return_code: " + str(return_code))
-                    if self.persistent_data['playing'] == True:
+                if self.player != None:
+                    poll_result = self.player.poll()
+                    if poll_result is None:
+                        #print("playing")
+                        pass
+                    else:
+                        time.sleep(1)
+                        #print("poll_result: " + str(poll_result))
+                        # Get return code from process
+                        return_code = self.player.returncode
                         if self.DEBUG:
-                            print("Error, radio unexpectedly stopped playing.")
-                    
-                        # If using Bluetooth output, then a crash of ffplay may be caused by Voco killing it on purpose. In that case.. wait a while before restarting ffplay to let Voco finish speaking.
-                        if self.persistent_data['audio_output'] == 'Bluetooth speaker':
-                            time.sleep(5)
-                    
-                        self.set_radio_state(True)
-                    
-                        """
-                        if time.time() - self.last_connection_fail_time < 5:
+                            print("clock: self.player process polling return_code: " + str(return_code))
+                        if self.persistent_data['playing'] == True:
                             if self.DEBUG:
-                                print("Already disconnected less than 5 seconds ago too. Something is wrong, turning off radio.")
-                            self.set_radio_state(False)
-                            self.set_status_on_thing("Could not connect to station")
-                            clock_active = False
-                        
-                        else:
-                            self.set_radio_state(True)
-                        """
+                                print("Error, radio unexpectedly stopped playing.")
                     
-                        self.last_connection_fail_time = time.time()
-                        time.sleep(3)
+                            # If using Bluetooth output, then a crash of ffplay may be caused by Voco killing it on purpose. In that case.. wait a while before restarting ffplay to let Voco finish speaking.
+                            if self.persistent_data['audio_output'] == 'Bluetooth speaker':
+                                time.sleep(5)
+                    
+                            self.set_radio_state(True)
+                    
+                            """
+                            if time.time() - self.last_connection_fail_time < 5:
+                                if self.DEBUG:
+                                    print("Already disconnected less than 5 seconds ago too. Something is wrong, turning off radio.")
+                                self.set_radio_state(False)
+                                self.set_status_on_thing("Could not connect to station")
+                                clock_active = False
+                        
+                            else:
+                                self.set_radio_state(True)
+                            """
+                    
+                            self.last_connection_fail_time = time.time()
+                            time.sleep(3)
             
-                #if self.persistent_data['playing'] == False:
-                #    if self.DEBUG:
-                #        print("clock noticed that self.persistent_data['playing'] is False. Exiting thread.")
-                #    clock_active = False
+                    #if self.persistent_data['playing'] == False:
+                    #    if self.DEBUG:
+                    #        print("clock noticed that self.persistent_data['playing'] is False. Exiting thread.")
+                    #    clock_active = False
             
             else:
                 self.clock_active = False
@@ -689,7 +690,7 @@ class InternetRadioAdapter(Adapter):
                     if self.DEBUG:
                         print("set_radio_state: warning, the player already existed. Stopping it first.")
                     self.player.terminate()
-                    
+                    self.player = None
                 environment = os.environ.copy()
                 
                 
@@ -839,6 +840,7 @@ class InternetRadioAdapter(Adapter):
                 if self.player != None:
                     self.player.terminate()
                     os.system('pkill ffplay')
+                    self.player = None
                 
                 else:
                     if self.DEBUG:
