@@ -226,6 +226,12 @@
                         //console.log("radiobrowser.info url: " + url);
                     });
                 }
+    			try{
+                    this.stop_audio_in_browser();
+    			}
+    			catch(e){
+    				//console.log("internet radio: could not stop audio in browser? " + e);
+    			}    
                 
 			});
 				
