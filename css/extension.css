@@ -241,6 +241,10 @@
     top: 0;
     left: 0;
 }
+.kiosk #extension-internet-radio-input-popup > div{
+    margin-bottom:50vh;
+}
+
 #extension-internet-radio-input-popup > div{
     width:60rem;
     max-width:80%;
@@ -916,6 +920,9 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-dow
 	.extension-internet-radio-line2 > div{
 		width:auto;
 	}
+    #extension-internet-radio-text-input-container{
+        padding: 2rem 8rem;
+    }
 }
 
 
@@ -936,6 +943,10 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-dow
     
     #extension-internet-radio-tabs-container > div{
         padding:2rem;
+    }
+    
+    #extension-internet-radio-text-input-container{
+        padding: 2rem 0;
     }
 	
 	/*

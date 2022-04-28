@@ -156,7 +156,7 @@
     				).then((body) => { 
     					//console.log("add station reaction: ", body);
                         if(body.state == 'ok'){
-                            alert("The station was saved");
+                            //alert("The station was saved");
                         }
     				}).catch((e) => {
     					console.log("internet-radio: error in add station handler: ", e);
