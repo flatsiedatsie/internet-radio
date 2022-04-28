@@ -236,6 +236,13 @@
                 document.getElementById('extension-internet-radio-input-popup').classList.add('extension-internet-radio-hidden');
                 this.get_init_data();
                 this.searching = false;
+                
+    			try{
+                    this.stop_audio_in_browser();
+    			}
+    			catch(e){
+    				//console.log("internet radio: could not stop audio in browser? " + e);
+    			}    
 			});
             
             
