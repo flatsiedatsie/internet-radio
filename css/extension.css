@@ -466,6 +466,10 @@
 }
 
 
+.kiosk .extension-internet-radio-preview{
+    display:none;
+}
+
 .extension-internet-radio-preview[data-playing]{
     background-repeat: no-repeat;
     background-position: 0.5em;
@@ -496,15 +500,33 @@
 
 
 
-/*  UP, DOWN, PLAY/PAUSE  */
+/*  UP, DOWN, PLAY/PAUSE, INDICATOR  */
 
+
+#extension-internet-radio-volume-indicator-container{
+    opacity: 0.9;
+    width: 5.6rem;
+    height: .5rem;
+    border-radius: .25rem;
+    background-color:rgba(255,255,255,.2);
+    /*border:2px solid rgba(255,255,255,.5);*/
+	position: fixed;
+	top: 23.6rem;
+	left:2rem;
+    z-index:998;
+    overflow:hidden;
+}
+
+#extension-internet-radio-volume-indicator-line{
+    height:100%;
+    background-color:rgba(0,0,0,.4);
+}
 
 
 
 #extension-internet-radio-volume-down-button{
 	background-image: url(/extensions/internet-radio/images/volume-down-icon.svg);
     cursor:pointer;
-    border: none;
     background-size: 30%;
     background-position: center;
     background-repeat: no-repeat;

@@ -102,7 +102,7 @@ class InternetRadioAPIHandler(APIHandler):
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'state' : 'ok', 'playing': self.adapter.persistent_data['playing'],'now_playing':self.adapter.now_playing, 'station': self.adapter.persistent_data['station']}),
+                          content=json.dumps({'state' : 'ok', 'playing': self.adapter.persistent_data['playing'],'now_playing':self.adapter.now_playing, 'station': self.adapter.persistent_data['station'], 'volume':self.adapter.persistent_data['volume']}),
                         )
                         
                     elif action == 'add':
@@ -141,7 +141,18 @@ class InternetRadioAPIHandler(APIHandler):
                             self.adapter.persistent_data['volume'] -= 5
                             if self.adapter.persistent_data['volume'] < 0:
                                 self.adapter.persistent_data['volume'] = 0
-                            self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
+                            #self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
+                            
+                            if self.DEBUG:
+                                print("new volume: " + str(self.adapter.persistent_data['volume']))
+                            
+                            if self.adapter.player != None:
+                                if self.DEBUG:
+                                    print("-")
+                                self.adapter.player.stdin.write(b'-')
+                                #self.adapter.player.stdin.flush()
+                            
+                            
                         except Exception as ex:
                             if self.DEBUG:
                                 print("API: error setting volume: " + str(ex))
@@ -161,8 +172,16 @@ class InternetRadioAPIHandler(APIHandler):
                             self.adapter.persistent_data['volume'] += 5
                             if self.adapter.persistent_data['volume'] > 100:
                                 self.adapter.persistent_data['volume'] = 100
+                            elif self.adapter.player != None:
+                                if self.DEBUG:
+                                    print("+")
+                                self.adapter.player.stdin.write(b'+')
+                                #self.adapter.player.stdin.flush()
+                            #self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
                             
-                            self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
+                            if self.DEBUG:
+                                print("new volume: " + str(self.adapter.persistent_data['volume']))
+                            
                         except Exception as ex:
                             if self.DEBUG:
                                 print("API: error setting volume: " + str(ex))

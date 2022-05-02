@@ -22,6 +22,9 @@
 			this.current_time = 0;
             this.show_buttons_everywhere = false;
             
+            this.previous_volume = 0;
+            this.volume_indicator_countdown = 0;
+            
             this.stations = [];
             this.station = ""; // name of station that is currently playing (if the user has named the stream)
             
@@ -290,6 +293,7 @@
                                 document.getElementById('extension-internet-radio-volume-down-button').classList.add('extension-internet-radio-volume-hidden');
                             }
                         }
+                        this.previous_volume = body['volume'];
                     }
                     
                     this.station = body.station;
@@ -331,8 +335,10 @@
                                         {'action':'poll'}
 
                     		        ).then((body) => {
-                                        //console.log("poll: ", body);
-                        
+                                        if(this.debug){
+                                            console.log("internet radio poll: ", body);
+                                        }
+                                        
                                         // Playing
                                         if(typeof body.playing != 'undefined'){
                                             this.playing = body.playing;
@@ -378,6 +384,19 @@
                             
                                             this.station = body.station;
                                         }
+                                        
+                                        if(typeof body.volume != 'undefined'){
+                                            if(body['volume'] != this.previous_volume){
+                                                console.log("volume was changed elsewhere to: ", body['volume'] );
+                                                this.previous_volume = body['volume'];
+                                                this.volume_indicator_countdown = 4;
+                                                if(document.getElementById('extension-internet-radio-volume-indicator-container') != null){
+                                                    document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
+                                                }
+                                                
+                                            }
+                                        }
+                                        
                     
                     		        }).catch((e) => {
                     		  			console.log("Error polling: ", e);
@@ -386,6 +405,18 @@
                                 }
                                 catch(e){
                                     console.log("Error doing poll: ", e);
+                                }
+                                
+                                if(this.volume_indicator_countdown > 0){
+                                    this.volume_indicator_countdown--;
+                                    if(document.getElementById('extension-internet-radio-volume-indicator-container') != null){
+                                        if(this.volume_indicator_countdown == 0){
+                                            document.getElementById('extension-internet-radio-volume-indicator-container').classList.add('extension-internet-radio-hidden');
+                                        }
+                                        else{
+                                            document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
+                                        }
+                                    }
                                 }
 				
                 			}, 2000);
@@ -424,8 +455,10 @@
             
                 //console.log("target_to_attach_buttons_to: ", target_to_attach_buttons_to);
             
-                // Check the buttons need to be added.
             
+                // Check if the buttons need to be added.
+            
+                // Adding volume down button
                 if(document.getElementById('extension-internet-radio-volume-down-button') == null){
                     //console.log("adding volume down button");
                     var down_button = document.createElement('button');
@@ -437,24 +470,52 @@
                     // Volume down
                     document.getElementById('extension-internet-radio-volume-down-button').addEventListener('click', (event) => {
                         //console.log("volume down button clicked");
-                
+                        
         		        window.API.postJson(
         		          `/extensions/${this.id}/api/ajax`,
                             {'action':'volume_down'}
 
         		        ).then((body) => {
-        					//console.log("Volume down result:");
-        					//console.log(body);
+                            if(this.debug){
+                                console.log("Volume down response: ", body);
+                            }
+                            
+                            // Show volume indicator
+                            this.volume_indicator_countdown = 4;
+                            this.previous_volume = body['volume'];
+                            document.getElementById('extension-internet-radio-volume-indicator-line').style.width = body['volume'] + "%";
+                            document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
+                            
+                            
                             if(body.volume == 0){
                                 document.getElementById('extension-internet-radio-volume-down-button').classList.add('extension-internet-radio-volume-hidden');
                             }
 				
         		        }).catch((e) => {
-        		  			console.log("Error lowering radio volume: " + e.toString());
+        		  			console.log("Error lowering radio volume: ",e);
         		        });	
         			});
                 }
             
+            
+                // Adding volume indicator
+                if(document.getElementById('extension-internet-radio-volume-indicator-container') == null){
+                    var indicator_el = document.createElement('div');
+                    indicator_el.setAttribute("id","extension-internet-radio-volume-indicator-container");
+                    var indicator2_el = document.createElement('div');
+                    indicator2_el.setAttribute("id","extension-internet-radio-volume-indicator-line");
+                    indicator_el.append(indicator2_el);
+                    target_to_attach_buttons_to.append(indicator_el);
+                    
+                    this.volume_indicator_countdown = 4;
+                    if(document.getElementById('extension-internet-radio-volume-indicator-line') != null){
+                        document.getElementById('extension-internet-radio-volume-indicator-line').style.width = this.previous_volume + "%";
+                    }
+                    
+                }
+            
+            
+                // Adding volume up button
                 if(document.getElementById('extension-internet-radio-volume-up-button') == null){
                     //console.log("adding volume up button");
                     var up_button = document.createElement('button');
@@ -472,7 +533,23 @@
                             {'action':'volume_up'}
 
         		        ).then((body) => {
-        					//console.log("Volume up result:");
+                            if(this.debug){
+                                console.log("Volume up response: ", body);
+                            }
+        					
+                            // Show volume indicator
+                            this.volume_indicator_countdown = 4;
+                            this.previous_volume = body['volume'];
+                            if(document.getElementById('extension-internet-radio-volume-indicator-line') != null){
+                                document.getElementById('extension-internet-radio-volume-indicator-line').style.width = body['volume'] + "%";
+                                document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
+                            }
+                            else{
+                                console.log('Error, volume indicator did not exist');
+                            }
+                            
+                            
+                            
         					//console.log(body);
                             document.getElementById('extension-internet-radio-volume-down-button').classList.remove('extension-internet-radio-volume-hidden');
                         
@@ -871,7 +948,7 @@
 							{'action':'play','stream_url': play_url}
 						).then((body) => { 
 							if(this.debug){
-							    console.log("play reaction: ", body);
+							    console.log("debug: play reaction: ", body);
 							}
                             if(body.state == 'ok'){
                                 play_button.setAttribute('data-playing', true);
