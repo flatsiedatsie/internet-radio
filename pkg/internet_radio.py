@@ -809,7 +809,7 @@ class InternetRadioAdapter(Adapter):
                     omx_output = "alsa:bluealsa"
 				
                 omx_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
-				if self.DEBUG:
+                if self.DEBUG:
                     print("\nOMX Player command: " + str(omx_command))
                 #omxplayer -o alsa:bluealsa
                 
@@ -898,9 +898,9 @@ class InternetRadioAdapter(Adapter):
                             
                 else:
                     if self.DEBUG:
-                        print("self.persistent_data['playing'] was already true, so this was a re-start of a borked ffplay, and the clock thread will not be started again")
+                        print("radio is to be turned on, but self.persistent_data['playing'] was already true")
                 
-                
+                """
                 if self.clock_active == False:
                 
                     if self.DEBUG:
@@ -913,7 +913,7 @@ class InternetRadioAdapter(Adapter):
                         if self.DEBUG:
                             print("Error starting the clock thread")
                         self.clock_active = False
-                
+                """
                 
                 
                 """
