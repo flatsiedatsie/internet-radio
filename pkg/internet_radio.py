@@ -732,8 +732,10 @@ class InternetRadioAdapter(Adapter):
                     except Exception as ex:
                         print("error terminating omxplayer with Q command. Maybe it stopped by itself?: " + str(ex))
                         print("player.poll(): " + str( self.player.poll() ))
-                        self.player = None
+                        #self.player = None
                 
+                os.system('pkill omxplayer')
+                self.player = None
                 
                 # Checking audio output option
                 
@@ -945,7 +947,7 @@ class InternetRadioAdapter(Adapter):
                     self.player.terminate()
                     self.player.kill()
                     #os.system('pkill ffplay')
-                    #os.system('pkill omxplayer')
+                    os.system('pkill omxplayer')
                     self.player = None
                 
                 else:
