@@ -138,22 +138,24 @@ class InternetRadioAPIHandler(APIHandler):
                             print("in volume down")
                         state = False
                         try:
-                            self.adapter.persistent_data['volume'] -= 5
-                            if self.adapter.persistent_data['volume'] < 0:
-                                self.adapter.persistent_data['volume'] = 0
+                            volume = self.adapter.persistent_data['volume'] - 5
+                            if volume > 100:
+                                volume = 100
                             #self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
                             
                             if self.DEBUG:
-                                print("new volume: " + str(self.adapter.persistent_data['volume']))
+                                print("new volume: " + str(volume))
                             
                             if self.adapter.player != None:
                                 if self.DEBUG:
                                     print("-")
-                                self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
+                                self.adapter.set_audio_volume(volume)
                                 #self.adapter.player.stdin.write(b'-')
                                 #self.adapter.player.stdin.flush()
                                 state = True
-                                
+                            else:
+                                if self.DEBUG:
+                                    print("self.adapter.player was None")
                             
                         except Exception as ex:
                             if self.DEBUG:
@@ -171,20 +173,24 @@ class InternetRadioAPIHandler(APIHandler):
                             print("in volume up")
                         state = False
                         try:
-                            self.adapter.persistent_data['volume'] += 5
-                            if self.adapter.persistent_data['volume'] > 100:
-                                self.adapter.persistent_data['volume'] = 100
-                            elif self.adapter.player != None:
+                            volume = self.adapter.persistent_data['volume'] + 5
+                            if volume > 100:
+                                volume = 100
+                            
+                            if self.DEBUG:
+                                print("new volume: " + str(volume))
+                                
+                            if self.adapter.player != None:
                                 if self.DEBUG:
                                     print("+")
-                                self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
+                                self.adapter.set_audio_volume(volume)
                                 state = True
                                 #self.adapter.player.stdin.write(b'+')
                                 #self.adapter.player.stdin.flush()
                             #self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
-                            
-                            if self.DEBUG:
-                                print("new volume: " + str(self.adapter.persistent_data['volume']))
+                            else:
+                                if self.DEBUG:
+                                    print("self.adapter.player was None")
                             
                         except Exception as ex:
                             if self.DEBUG:

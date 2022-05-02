@@ -932,13 +932,14 @@ class InternetRadioAdapter(Adapter):
     def set_audio_volume(self,volume):
         if self.DEBUG:
             print("Setting audio output volume to " + str(volume))
-            
+            print("self.player: " + str(self.player))
         set_volume_via_radio_state = True
             
         if int(volume) != self.persistent_data['volume']:
             self.persistent_data['volume'] = int(volume)
             self.save_persistent_data()
-            
+            if self.DEBUG:
+                print("Volume changed")
             
             try:
                 if self.player != None:
@@ -986,7 +987,10 @@ class InternetRadioAdapter(Adapter):
                         
             except Exception as ex:
                 print("Error trying to set volume via dbus: " + str(ex))
-
+                
+        else:
+            if self.DEBUG:
+                print("Volume did not change?")
         self.set_volume_on_thing(volume)
         #if self.player == None:
         
