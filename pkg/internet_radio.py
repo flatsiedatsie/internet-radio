@@ -636,7 +636,6 @@ class InternetRadioAdapter(Adapter):
             #  turn on
             #
             if power:
-                self.set_status_on_thing("Playing")
                 if self.player != None:
                     if self.DEBUG:
                         print("set_radio_state: warning, the player already existed. Stopping it first.")
@@ -755,6 +754,8 @@ class InternetRadioAdapter(Adapter):
                 if self.DEBUG:
                     print("self.player created")
                 
+                self.persistent_data['playing'] = True
+                self.set_status_on_thing("Playing")
                 
                 if also_call_volume:
                     if self.DEBUG:
