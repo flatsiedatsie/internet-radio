@@ -952,7 +952,7 @@ class InternetRadioAdapter(Adapter):
                     if omxplayerdbus_user != None:
                         if self.DEBUG:
                             print("trying dbus-send")
-                        environment["DBUS_SESSION_BUS_ADDRESS"] = omxplayerdbus_user
+                        environment["DBUS_SESSION_BUS_ADDRESS"] = str(omxplayerdbus_user).strip()
                         environment["DISPLAY"] = ":0"
                         
                         if self.DEBUG:
@@ -960,7 +960,7 @@ class InternetRadioAdapter(Adapter):
                             
                         dbus_volume = volume / 100
                             
-                        dbus_command = 'sudo dbus-send --print-reply --session --reply-timeout=500 --dest=org.mpris.MediaPlayer2.omxplayer /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:"org.mpris.MediaPlayer2.Player" string:"Volume" double:' + str(dbus_volume)
+                        dbus_command = 'dbus-send --print-reply --session --reply-timeout=500 --dest=org.mpris.MediaPlayer2.omxplayer /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:"org.mpris.MediaPlayer2.Player" string:"Volume" double:' + str(dbus_volume)
                         #export DBUS_SESSION_BUS_ADDRESS=$(cat /tmp/omxplayerdbus.${USER:-root})
                         dbus_process = subprocess.Popen(dbus_command, 
                                         env=environment,
@@ -971,6 +971,11 @@ class InternetRadioAdapter(Adapter):
                                         close_fds=True)
                         
                         stdout,stderr = dbus_process.communicate()
+                        if len(stderr) > 4:
+                            set_volume_via_radio_state = True
+                        else:
+                            set_volume_via_radio_state = False
+                            
                         if self.DEBUG:
                             print("dbus stdout: " + str(stdout))
                             print("dbus stderr: " + str(stderr))
@@ -978,7 +983,7 @@ class InternetRadioAdapter(Adapter):
                         #dbus_result = dbus_process.stdout.read()
                         #dbus_process.stdout.close()
                         
-                        set_volume_via_radio_state = False
+                        
             except Exception as ex:
                 print("Error trying to set volume via dbus: " + str(ex))
 

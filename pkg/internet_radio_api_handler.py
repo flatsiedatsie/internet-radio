@@ -136,7 +136,7 @@ class InternetRadioAPIHandler(APIHandler):
                     elif action == 'volume_down':
                         if self.DEBUG:
                             print("in volume down")
-                        state = 'ok'
+                        state = False
                         try:
                             self.adapter.persistent_data['volume'] -= 5
                             if self.adapter.persistent_data['volume'] < 0:
@@ -149,14 +149,16 @@ class InternetRadioAPIHandler(APIHandler):
                             if self.adapter.player != None:
                                 if self.DEBUG:
                                     print("-")
-                                self.adapter.player.stdin.write(b'-')
+                                self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
+                                #self.adapter.player.stdin.write(b'-')
                                 #self.adapter.player.stdin.flush()
-                            
+                                state = True
+                                
                             
                         except Exception as ex:
                             if self.DEBUG:
                                 print("API: error setting volume: " + str(ex))
-                            state = "Error: could not lower volume"
+                            
                             
                         return APIResponse(
                           status=200,
@@ -167,7 +169,7 @@ class InternetRadioAPIHandler(APIHandler):
                     elif action == 'volume_up':
                         if self.DEBUG:
                             print("in volume up")
-                        state = 'ok'
+                        state = False
                         try:
                             self.adapter.persistent_data['volume'] += 5
                             if self.adapter.persistent_data['volume'] > 100:
@@ -175,7 +177,9 @@ class InternetRadioAPIHandler(APIHandler):
                             elif self.adapter.player != None:
                                 if self.DEBUG:
                                     print("+")
-                                self.adapter.player.stdin.write(b'+')
+                                self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
+                                state = True
+                                #self.adapter.player.stdin.write(b'+')
                                 #self.adapter.player.stdin.flush()
                             #self.adapter.set_audio_volume(self.adapter.persistent_data['volume'])
                             
@@ -185,7 +189,6 @@ class InternetRadioAPIHandler(APIHandler):
                         except Exception as ex:
                             if self.DEBUG:
                                 print("API: error setting volume: " + str(ex))
-                            state = "Error: could not raise volume"
                             
                         return APIResponse(
                           status=200,
