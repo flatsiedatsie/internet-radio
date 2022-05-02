@@ -83,6 +83,8 @@ class InternetRadioAdapter(Adapter):
         self.current_stream_has_now_playing_info = True
         self.player = None
         
+        self.clock_active = True  # TODO used to circumvent the clock thread for now, as an experiment
+        
         # Bluetooth
         self.last_bt_connection_check_time = 0
         self.bluealsa_available = False
@@ -193,7 +195,8 @@ class InternetRadioAdapter(Adapter):
 
         # Give Bluetooth Pairing addon some time to reconnect to the speaker
         if self.persistent_data['bluetooth_device_mac'] != None:
-            time.sleep(15)
+            if not self.DEBUG:
+                time.sleep(15)
         
         if self.bluetooth_device_check():
             if self.DEBUG:
@@ -245,7 +248,24 @@ class InternetRadioAdapter(Adapter):
 
         #print("internet radio adapter init complete")
 
-
+        
+        while self.running: # and self.player != None
+            time.sleep(1)
+            
+            if self.persistent_data['playing'] == True:
+                try:
+                    #if self.DEBUG:
+                    #    print(str(self.adapter.poll_counter))
+                    if self.poll_counter == 0:
+                        self.now_playing = self.get_artist()
+                except Exception as ex:
+                    print("error updating now_playing: " + str(ex))
+            
+                #if self.adapter.playing:
+                self.poll_counter += 1
+                if self.poll_counter > 20:
+                    self.poll_counter = 0
+                    
 
 
 
@@ -374,7 +394,8 @@ class InternetRadioAdapter(Adapter):
                     #if self.DEBUG:
                     #    print(str(self.adapter.poll_counter))
                     if self.poll_counter == 0:
-                        self.now_playing = self.get_artist()
+                        pass
+                        #self.now_playing = self.get_artist()
                 except Exception as ex:
                     print("error updating now_playing: " + str(ex))
             
@@ -959,7 +980,9 @@ class InternetRadioAdapter(Adapter):
                         if self.DEBUG:
                             print("environment: " + str(environment))
                             
-                        dbus_volume = volume / 100
+                        dbus_volume = int(volume / 100)
+                        if self.DEBUG:
+                            print("dbus_volume: " + str(dbus_volume))
                             
                         dbus_command = 'dbus-send --print-reply --session --reply-timeout=500 --dest=org.mpris.MediaPlayer2.omxplayer /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:"org.mpris.MediaPlayer2.Player" string:"Volume" double:' + str(dbus_volume)
                         #export DBUS_SESSION_BUS_ADDRESS=$(cat /tmp/omxplayerdbus.${USER:-root})

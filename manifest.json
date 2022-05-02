@@ -27,6 +27,7 @@
   "options": {
     "default": {
 	  "Show buttons everywhere": false,
+	  "Do not get song details": false,
       "Debugging": false
     },
     "schema": {
@@ -34,6 +35,10 @@
         "Show buttons everywhere": {
           "type": "boolean",
           "description": "If you enable this feature, the volume and play/pause buttons will be shown on all pages, not just on the internet radio page itself."
+		},
+        "Do not get song details": {
+          "type": "boolean",
+          "description": "Normally the addon will try to request the currently playing song's name and artist data every 20 seconds. If you don't care about this, you can disable it."
 		},
         "Debugging": {
           "type": "boolean",
@@ -45,7 +50,7 @@
     }
   },
   "short_name": "Radio",
-  "version": "2.1.17",
+  "version": "2.1.19",
   "web_accessible_resources": [
     "css/*.css",
     "images/*.svg",
