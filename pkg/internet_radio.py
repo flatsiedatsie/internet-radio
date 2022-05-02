@@ -1,8 +1,9 @@
 """Internet radio adapter for WebThings Gateway."""
 
-# test command to play radio: 
+# test commands to play radio: 
 # ffplay -nodisp -vn -infbuf -autoexit http://direct.fipradio.fr/live/fip-midfi.mp3 -volume 100
-
+# SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=00:00:00:00:00:00 ffplay -nodisp -vn -infbuf -autoexit http://direct.fipradio.fr/live/fip-midfi.mp3 -volume 100
+# omxplayer -o alsa:bluealsa http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
 
 import os
 import re
@@ -82,6 +83,7 @@ class InternetRadioAdapter(Adapter):
         self.now_playing = "" # will hold artist and song title
         self.current_stream_has_now_playing_info = True
         self.player = None
+        self.get_song_details = True
         
         self.clock_active = True  # TODO used to circumvent the clock thread for now, as an experiment
         
@@ -248,23 +250,23 @@ class InternetRadioAdapter(Adapter):
 
         #print("internet radio adapter init complete")
 
-        
-        while self.running: # and self.player != None
-            time.sleep(1)
+        if self.get_song_details:
+            while self.running: # and self.player != None
+                time.sleep(1)
             
-            if self.persistent_data['playing'] == True:
-                try:
-                    #if self.DEBUG:
-                    #    print(str(self.adapter.poll_counter))
-                    if self.poll_counter == 0:
-                        self.now_playing = self.get_artist()
-                except Exception as ex:
-                    print("error updating now_playing: " + str(ex))
+                if self.persistent_data['playing'] == True:
+                    try:
+                        #if self.DEBUG:
+                        #    print(str(self.adapter.poll_counter))
+                        if self.poll_counter == 0:
+                            self.now_playing = self.get_artist()
+                    except Exception as ex:
+                        print("error updating now_playing: " + str(ex))
             
-                #if self.adapter.playing:
-                self.poll_counter += 1
-                if self.poll_counter > 20:
-                    self.poll_counter = 0
+                    #if self.adapter.playing:
+                    self.poll_counter += 1
+                    if self.poll_counter > 20:
+                        self.poll_counter = 0
                     
 
 
@@ -299,6 +301,12 @@ class InternetRadioAdapter(Adapter):
                 self.show_buttons_everywhere = bool(config['Show buttons everywhere'])
                 if self.DEBUG:
                     print("Show buttons everywhere preference was in config: " + str(self.show_buttons_everywhere))
+
+            if 'Do not get song details' in config:
+                #print("-Debugging was in config")
+                self.get_song_details = not bool(config['Do not get song details'])
+                if self.DEBUG:
+                    print("Do not get song details preference was in config: " + str(not self.get_song_details))
 
             if self.DEBUG:
                 print(str(config))
@@ -801,7 +809,8 @@ class InternetRadioAdapter(Adapter):
                     omx_output = "alsa:bluealsa"
 				
                 omx_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
-				
+				if self.DEBUG:
+                    print("\nOMX Player command: " + str(omx_command))
                 #omxplayer -o alsa:bluealsa
                 
                 omx_command_array = omx_command.split(' ')
@@ -828,6 +837,7 @@ class InternetRadioAdapter(Adapter):
                     
                     #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.persistent_data['bluetooth_device_mac']) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
                     
+                                    
                     #good:
                     #my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
                     
