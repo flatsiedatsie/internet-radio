@@ -311,7 +311,6 @@ class InternetRadioAdapter(Adapter):
             if self.DEBUG:
                 print(str(config))
 
-            
             if 'Radio stations' in config and len(self.persistent_data['stations']) == 0:
                 self.persistent_data['stations'] = config['Radio stations']
                 #self.persistent_data['stations'] = config['Radio stations']
@@ -378,94 +377,6 @@ class InternetRadioAdapter(Adapter):
         self.persistent_data['bluetooth_device_mac'] = None
         #self.save_persistent_data()
         return False
-
-
-
-#
-#  CLOCK
-#
-
-    def clock(self):
-        """ Runs every second and handles the various timers """
-        if self.DEBUG:
-            print("CLOCK INIT. self.player: " + str(dir(self.player)))
-            print("self.persistent_data['playing']: " + str(self.persistent_data['playing']))
-        
-        #self.clock_started = True
-        self.clock_active = True
-        
-        while self.clock_active and self.running: # and self.player != None
-            time.sleep(1)
-            
-            if self.persistent_data['playing'] == True:
-                try:
-                    #if self.DEBUG:
-                    #    print(str(self.adapter.poll_counter))
-                    if self.poll_counter == 0:
-                        pass
-                        #self.now_playing = self.get_artist()
-                except Exception as ex:
-                    print("error updating now_playing: " + str(ex))
-            
-                #if self.adapter.playing:
-                self.poll_counter += 1
-                if self.poll_counter > 20:
-                    self.poll_counter = 0
-            
-            
-                #print("playing")
-                # Wait until process terminates (without using p.wait())
-                if self.player != None:
-                    poll_result = self.player.poll()
-                    if poll_result is None:
-                        #print("playing")
-                        pass
-                    else:
-                        time.sleep(1)
-                        #print("poll_result: " + str(poll_result))
-                        # Get return code from process
-                        
-                        return_code = self.player.returncode
-                        if self.DEBUG:
-                            print("clock: self.player process polling return_code: " + str(return_code))
-                        if self.running and self.persistent_data['playing'] == True:
-                            if self.DEBUG:
-                                print("Error, radio unexpectedly stopped playing.")
-                    
-                            # If using Bluetooth output, then a crash of ffplay may be caused by Voco killing it on purpose. In that case.. wait a while before restarting ffplay to let Voco finish speaking.
-                            if self.persistent_data['audio_output'] == 'Bluetooth speaker':
-                                time.sleep(5)
-                    
-                            self.set_radio_state( self.persistent_data['playing'] )
-                    
-                            """
-                            if time.time() - self.last_connection_fail_time < 5:
-                                if self.DEBUG:
-                                    print("Already disconnected less than 5 seconds ago too. Something is wrong, turning off radio.")
-                                self.set_radio_state(False)
-                                self.set_status_on_thing("Could not connect to station")
-                                clock_active = False
-                        
-                            else:
-                                self.set_radio_state(True)
-                            """
-                    
-                            self.last_connection_fail_time = time.time()
-                            time.sleep(3)
-            
-                    #if self.persistent_data['playing'] == False:
-                    #    if self.DEBUG:
-                    #        print("clock noticed that self.persistent_data['playing'] is False. Exiting thread.")
-                    #    clock_active = False
-            
-            else:
-                self.clock_active = False
-            
-        if self.DEBUG:
-            print("Internet Radio CLOCK THREAD EXIT")
-
-
-
 
 
 
@@ -675,10 +586,14 @@ class InternetRadioAdapter(Adapter):
                 self.current_stream_has_now_playing_info = True # reset this, so get_artist will try to get now_playing info
                 self.poll_counter = 18 # this will cause get_artist to be called again soon
                 
-                # Finally, if the station is changed, also turn on the radio
+                # Finally, if the station is changed, also turn on the radio (except for the first time)
                 if self.in_first_run:
                     self.in_first_run = False
+                    if self.DEBUG:
+                        print("Set first_run to false")
                 else:
+                    if self.DEBUG:
+                        print("Station changed. Next: turning on the radio\n")
                     self.set_radio_state(True)
                 
             else:
@@ -689,7 +604,7 @@ class InternetRadioAdapter(Adapter):
 
 
 
-    def set_radio_state(self,power):
+    def set_radio_state(self,power,also_call_volume=True):
         if self.DEBUG:
             print("in set_radio_state. Setting radio power to: " + str(power))
         
@@ -734,6 +649,12 @@ class InternetRadioAdapter(Adapter):
                         print("player.poll(): " + str( self.player.poll() ))
                         #self.player = None
                 
+                else:
+                    if self.DEBUG:
+                        print("self.player was still None")
+                       
+                if self.DEBUG:
+                    print("pkill omxplayer")
                 os.system('pkill omxplayer')
                 self.player = None
                 
@@ -791,16 +712,19 @@ class InternetRadioAdapter(Adapter):
                 #kill_process('ffplay')
                 
 				
-                logarithmic_volume = -6000
+                logarithmic_volume = -6000 # start at 0
 				
-                if self.persistent_data['volume'] > 0:
+                # set the volume by starting omx-player with that volume
+                # Somehow this volume doesn't match the volume from the set_audio_volume method, so it's a fall-back option.
+                if also_call_volume == False:
                     
-                	#print("volume is now 1")
-                    pre_volume = int(self.persistent_data['volume']) / 100
-					#print("pre_volume: " + str(pre_volume))
-					# OMXPlayer volume is between -6000 and 0 (logarithmic)
-                    logarithmic_volume = 2000 * math.log(pre_volume)
-					#print("logarithmic_volume: " + str(logarithmic_volume))
+                    if self.persistent_data['volume'] > 0:
+                    	#print("volume is now 1")
+                        pre_volume = int(self.persistent_data['volume']) / 100
+    					#print("pre_volume: " + str(pre_volume))
+    					# OMXPlayer volume is between -6000 and 0 (logarithmic)
+                        logarithmic_volume = 2000 * math.log(pre_volume)
+    					#print("logarithmic_volume: " + str(logarithmic_volume))
                 
                
                 
@@ -827,108 +751,17 @@ class InternetRadioAdapter(Adapter):
                                     stderr=subprocess.PIPE,
                                     bufsize=0,
                                     close_fds=True)
-				
-                """
-				if bt_connected:
-                    
-                    omx_output = "alsa:bluealsa"
-                    
-                    environment["SDL_AUDIODRIVER"] = "alsa"
-                    #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
-                    environment["AUDIODEV"] = "bluealsa:00:00:00:00:00:00"
-                    
-                    #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.persistent_data['bluetooth_device_mac']) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
-                    
-                                    
-                    #good:
-                    #my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
-                    
-                    
-                    my_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
-                    
-                    # omxplayer -o alsa:bluealsa http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
-                    
-                    
-					
+                
+                if self.DEBUG:
+                    print("self.player created")
+                
+                
+                if also_call_volume:
                     if self.DEBUG:
-                        print("Internet radio addon will call this subprocess command: " + str(my_command))
-                        #print("starting ffplay...")
-                    self.player = subprocess.Popen(my_command, 
-                                    env=environment,
-                                    shell=True,				# Streaming to bluetooth seems to only work if shell is true. The position of the volume string also seemed to matter
-                                    stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    close_fds=True)
+                        print("set_radio_state: alse setting volume")
+                    time.sleep(1)
+                    self.set_audio_volume(self.persistent_data['volume'])
                 
-                
-                else:
-                    #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
-                    
-                    #good:
-                    my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit","-volume",str(self.persistent_data['volume']), str(self.persistent_data['current_stream_url']) )
-                    
-                    my_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
-                
-                    my_command_array = my_command.split(' ')
-
-                    if self.DEBUG:
-                        print("Internet radio addon will call this subprocess command: " + str(my_command))
-                        print("starting ffplay...")
-                    self.player = subprocess.Popen(my_command_array, 
-                                    env=environment,
-                                    stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    close_fds=True)
-                
-                """
-				
-                if self.persistent_data['playing'] == False:
-                    try:
-                        if hasattr(self, 't'):
-                            if self.DEBUG:
-                                print("- clock object already existed")
-                            if self.t.is_alive():
-                                if self.DEBUG:
-                                    print("- Weird, clock thread was still alive")
-                                time.sleep(3)
-                    except Exception as ex:
-                        print("Error checking clock thread status: " + str(ex))
-                            
-                    self.persistent_data['playing'] = True
-                            
-                else:
-                    if self.DEBUG:
-                        print("radio is to be turned on, but self.persistent_data['playing'] was already true")
-                
-                """
-                if self.clock_active == False:
-                
-                    if self.DEBUG:
-                        print("self.persistent_data['playing'] has been set to true. Starting clock thread.")
-                    try:
-                        self.t = threading.Thread(target=self.clock)
-                        self.t.daemon = True
-                        self.t.start()
-                    except:
-                        if self.DEBUG:
-                            print("Error starting the clock thread")
-                        self.clock_active = False
-                """
-                
-                
-                """
-                try:
-                    # Filter stdout
-                    for line in iter(p.stdout.readline, ''):
-                        sys.stdout.flush()
-                        # Print status
-                        print(">>> " + line.rstrip())
-                        sys.stdout.flush()
-                except:
-                    sys.stdout.flush()
-                """
      
             #
             #  turn off
@@ -966,75 +799,75 @@ class InternetRadioAdapter(Adapter):
         if self.DEBUG:
             print("Setting audio output volume to " + str(volume))
             print("self.player: " + str(self.player))
-        set_volume_via_radio_state = True
+        set_volume_via_radio_state = False
             
         if int(volume) != self.persistent_data['volume']:
             self.persistent_data['volume'] = int(volume)
             self.save_persistent_data()
             if self.DEBUG:
                 print("Volume changed")
-            
-            try:
-                if self.player != None:
-                    if self.DEBUG:
-                        print("Trying dbus volume")
-
-                    omxplayerdbus_user = run_command('cat /tmp/omxplayerdbus.${USER:-root}')
-                    if self.DEBUG:
-                        print("DBUS_SESSION_BUS_ADDRESS: " + str(omxplayerdbus_user))
-                    environment = os.environ.copy()
-                    if omxplayerdbus_user != None:
-                        if self.DEBUG:
-                            print("trying dbus-send")
-                        environment["DBUS_SESSION_BUS_ADDRESS"] = str(omxplayerdbus_user).strip()
-                        environment["DISPLAY"] = ":0"
-                        
-                        if self.DEBUG:
-                            print("environment: " + str(environment))
-                            
-                        dbus_volume = int(volume / 100)
-                        if self.DEBUG:
-                            print("dbus_volume: " + str(dbus_volume))
-                            
-                        dbus_command = 'dbus-send --print-reply --session --reply-timeout=500 --dest=org.mpris.MediaPlayer2.omxplayer /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:"org.mpris.MediaPlayer2.Player" string:"Volume" double:' + str(dbus_volume)
-                        #export DBUS_SESSION_BUS_ADDRESS=$(cat /tmp/omxplayerdbus.${USER:-root})
-                        dbus_process = subprocess.Popen(dbus_command, 
-                                        env=environment,
-                                        shell=True,				# Streaming to bluetooth seems to only work if shell is true. The position of the volume string also seemed to matter
-                                        stdin=subprocess.PIPE,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE,
-                                        close_fds=True)
-                        
-                        stdout,stderr = dbus_process.communicate()
-                        if len(stderr) > 4:
-                            set_volume_via_radio_state = True
-                        else:
-                            set_volume_via_radio_state = False
-                            
-                        if self.DEBUG:
-                            print("dbus stdout: " + str(stdout))
-                            print("dbus stderr: " + str(stderr))
-                        
-                        #dbus_result = dbus_process.stdout.read()
-                        #dbus_process.stdout.close()
-                        
-                        
-            except Exception as ex:
-                print("Error trying to set volume via dbus: " + str(ex))
-                
         else:
             if self.DEBUG:
-                print("Volume did not change?")
+                print("Volume did not change")
+                
+        try:
+            if self.player != None:
+                if self.DEBUG:
+                    print("Trying dbus volume")
+
+                omxplayerdbus_user = run_command('cat /tmp/omxplayerdbus.${USER:-root}')
+                if self.DEBUG:
+                    print("DBUS_SESSION_BUS_ADDRESS: " + str(omxplayerdbus_user))
+                environment = os.environ.copy()
+                if omxplayerdbus_user != None:
+                    if self.DEBUG:
+                        print("trying dbus-send")
+                    environment["DBUS_SESSION_BUS_ADDRESS"] = str(omxplayerdbus_user).strip()
+                    environment["DISPLAY"] = ":0"
+                    
+                    if self.DEBUG:
+                        print("environment: " + str(environment))
+                        
+                    dbus_volume = volume / 100
+                    if self.DEBUG:
+                        print("dbus_volume: " + str(dbus_volume))
+                        
+                    dbus_command = 'dbus-send --print-reply --session --reply-timeout=500 --dest=org.mpris.MediaPlayer2.omxplayer /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:"org.mpris.MediaPlayer2.Player" string:"Volume" double:' + str(dbus_volume)
+                    #export DBUS_SESSION_BUS_ADDRESS=$(cat /tmp/omxplayerdbus.${USER:-root})
+                    dbus_process = subprocess.Popen(dbus_command, 
+                                    env=environment,
+                                    shell=True,				# Streaming to bluetooth seems to only work if shell is true. The position of the volume string also seemed to matter
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    close_fds=True)
+                    
+                    stdout,stderr = dbus_process.communicate()
+                    if len(stderr) > 4:
+                        set_volume_via_radio_state = True
+                    else:
+                        set_volume_via_radio_state = False
+                        
+                    if self.DEBUG:
+                        print("dbus stdout: " + str(stdout))
+                        print("dbus stderr: " + str(stderr))
+                    
+                    #dbus_result = dbus_process.stdout.read()
+                    #dbus_process.stdout.close()
+                    
+                    
+        except Exception as ex:
+            print("Error trying to set volume via dbus: " + str(ex))
+            set_volume_via_radio_state= True
+            
         self.set_volume_on_thing(volume)
         #if self.player == None:
         
         if set_volume_via_radio_state:
             if self.DEBUG:
-                print("setting radio volume by restarting audio player")
-            self.set_radio_state(self.persistent_data['power'])
+                print("WARNING: setting radio volume by restarting audio player instead")
+            self.set_radio_state(self.persistent_data['power'],False)
 
-			
         return
 
 
@@ -1313,16 +1146,16 @@ class InternetRadioAdapter(Adapter):
         self.set_status_on_thing("Bye")
         #self.devices['internet-radio'].connected_notify(False)
         self.save_persistent_data()
-        #self.set_radio_state(0)
+        self.set_radio_state(False)
         self.running = False
-        if self.player != None:
-            self.player.stdin.write(b'q')
-        os.system('pkill omxplayer')
+        #if self.player != None:
+        #    self.player.stdin.write(b'q')
+        #os.system('pkill omxplayer')
 
 
     def remove_thing(self, device_id):
         try:
-            self.set_radio_state(0)
+            self.set_radio_state(False)
             obj = self.get_device(device_id)
             self.handle_device_removed(obj)                     # Remove from device dictionary
             if self.DEBUG:
