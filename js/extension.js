@@ -510,7 +510,7 @@
                     indicator_el.append(indicator2_el);
                     target_to_attach_buttons_to.append(indicator_el);
                     
-                    this.volume_indicator_countdown = 4;
+                    //this.volume_indicator_countdown = 4;
                     if(document.getElementById('extension-internet-radio-volume-indicator-line') != null){
                         document.getElementById('extension-internet-radio-volume-indicator-line').style.width = this.previous_volume + "%";
                     }
@@ -588,9 +588,9 @@
                                     if(document.getElementById('extension-internet-radio-now-playing') != null){
                                         document.getElementById('extension-internet-radio-now-playing').innerText = "";
                                     }
-                                    if(document.getElementById('extension-internet-radio-volume-indicator-container') != null){
-                                        document.getElementById('extension-internet-radio-volume-indicator-container').classList.add('extension-internet-radio-hidden');
-                                    }
+                                    //if(document.getElementById('extension-internet-radio-volume-indicator-container') != null){
+                                    //    document.getElementById('extension-internet-radio-volume-indicator-container').classList.add('extension-internet-radio-hidden');
+                                    //}
                                     
                                     
                                 }

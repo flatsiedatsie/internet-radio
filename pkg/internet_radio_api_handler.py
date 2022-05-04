@@ -37,7 +37,6 @@ class InternetRadioAPIHandler(APIHandler):
         self.DEBUG = self.adapter.DEBUG
 
 
-            
         # Intiate extension addon API handler
         try:
             manifest_fname = os.path.join(

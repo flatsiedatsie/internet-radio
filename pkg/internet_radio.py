@@ -51,6 +51,7 @@ class InternetRadioAdapter(Adapter):
 
         #print("initialising adapter from class")
         self.pairing = False
+        self.ready = False
         self.addon_name = 'internet-radio'
         self.DEBUG = False
         self.name = self.__class__.__name__
@@ -87,6 +88,8 @@ class InternetRadioAdapter(Adapter):
         
         self.clock_active = True  # TODO used to circumvent the clock thread for now, as an experiment
         
+        self.respeaker_detected = False
+        
         # Bluetooth
         self.last_bt_connection_check_time = 0
         self.bluealsa_available = False
@@ -110,6 +113,11 @@ class InternetRadioAdapter(Adapter):
             if self.bluealsa_available:
                 self.audio_output_options.append( "Bluetooth speaker" )
                 
+            respeaker_check = run_command('aplay -l') 
+            if 'seeed' in respeaker_check:
+                self.respeaker_detected = True
+                if self.DEBUG:
+                    print("respeaker hat detected, will use ffplay instead of omxplayer")
 
         # Get persistent data
         try:
@@ -250,6 +258,8 @@ class InternetRadioAdapter(Adapter):
 
         #print("internet radio adapter init complete")
 
+        self.ready = True
+
         if self.get_song_details:
             while self.running: # and self.player != None
                 time.sleep(1)
@@ -296,6 +306,9 @@ class InternetRadioAdapter(Adapter):
                 if self.DEBUG:
                     print("Debugging enabled")
 
+            if self.DEBUG:
+                print(str(config))
+                
             if 'Show buttons everywhere' in config:
                 #print("-Debugging was in config")
                 self.show_buttons_everywhere = bool(config['Show buttons everywhere'])
@@ -308,8 +321,12 @@ class InternetRadioAdapter(Adapter):
                 if self.DEBUG:
                     print("Do not get song details preference was in config: " + str(not self.get_song_details))
 
-            if self.DEBUG:
-                print(str(config))
+            if "Use FFPlay instead of OMX Player" in config:
+                ffplay_preference = bool(config['Use FFPlay instead of OMX Player'])
+                if ffplay_preference:
+                    self.respeaker_detected = ffplay_preference
+                if self.DEBUG:
+                    print("Use FFPlay instead of OMX Player preference was in config. self.respeaker_detected is now: " + str(self.respeaker_detected))
 
             if 'Radio stations' in config and len(self.persistent_data['stations']) == 0:
                 self.persistent_data['stations'] = config['Radio stations']
@@ -640,7 +657,8 @@ class InternetRadioAdapter(Adapter):
                     if self.DEBUG:
                         print("set_radio_state: warning, the player already existed. Stopping it first.")
                     try:
-                        self.player.stdin.write(b'q')
+                        if self.respeaker_detected == False:
+                            self.player.stdin.write(b'q')
                         self.player.terminate()
                         self.player = None
                     except Exception as ex:
@@ -652,9 +670,16 @@ class InternetRadioAdapter(Adapter):
                     if self.DEBUG:
                         print("self.player was still None")
                        
-                if self.DEBUG:
-                    print("pkill omxplayer")
-                os.system('pkill omxplayer')
+                       
+                if self.respeaker_detected:
+                    if self.DEBUG:
+                        print("pkill omxplayer")
+                    os.system('pkill omxplayer')
+                    
+                else:
+                    if self.DEBUG:
+                        print("pkill ffplay")
+                    os.system('pkill ffplay')
                 self.player = None
                 
                 # Checking audio output option
@@ -715,7 +740,7 @@ class InternetRadioAdapter(Adapter):
 				
                 # set the volume by starting omx-player with that volume
                 # Somehow this volume doesn't match the volume from the set_audio_volume method, so it's a fall-back option.
-                if also_call_volume == False:
+                if also_call_volume == False and self.respeaker_detected == False:
                     
                     if self.persistent_data['volume'] > 0:
                     	#print("volume is now 1")
@@ -728,28 +753,66 @@ class InternetRadioAdapter(Adapter):
                
                 
                 
+                if self.respeaker_detected:
+                    
+                    environment = os.environ.copy()
+                    
+                    if bt_connected:
+                    
+                        environment["SDL_AUDIODRIVER"] = "alsa"
+                        #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
+                        environment["AUDIODEV"] = "bluealsa:00:00:00:00:00:00"
+                    
+                        #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.persistent_data['bluetooth_device_mac']) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
+                        my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
+                    
+                    
+                        if self.DEBUG:
+                            print("Internet radio addon will call this subprocess command: " + str(my_command))
+                            print("starting ffplay...")
+                        self.player = subprocess.Popen(my_command, 
+                                        env=environment,
+                                        shell=True,
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                
+                
+                    else:
+                        #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
+                        my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit","-volume",str(self.persistent_data['volume']), str(self.persistent_data['current_stream_url']) )
+
+                        if self.DEBUG:
+                            print("Internet radio addon will call this subprocess command: " + str(my_command))
+                            print("starting ffplay...")
+                        self.player = subprocess.Popen(my_command, 
+                                        env=environment,
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                    
+                else:
+                    omx_output = "both"
+                    if bt_connected:
+                        omx_output = "alsa:bluealsa"
 				
-                omx_output = "both"
-                if bt_connected:
-                    omx_output = "alsa:bluealsa"
-				
-                omx_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
-                if self.DEBUG:
-                    print("\nOMX Player command: " + str(omx_command))
-                #omxplayer -o alsa:bluealsa
+                    omx_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
+                    if self.DEBUG:
+                        print("\nOMX Player command: " + str(omx_command))
+                    #omxplayer -o alsa:bluealsa
                 
-                omx_command_array = omx_command.split(' ')
+                    command_array = omx_command.split(' ')
                 
-                #environment = os.environ.copy()
-                #environment["DISPLAY"] = ":0"
+                    #environment = os.environ.copy()
+                    #environment["DISPLAY"] = ":0"
                 
-                self.player = subprocess.Popen(omx_command_array, 
-                                    #env=environment,
-                                    stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    bufsize=0,
-                                    close_fds=True)
+                    self.player = subprocess.Popen(command_array, 
+                                        #env=environment,
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        bufsize=0,
+                                        close_fds=True)
                 
                 if self.DEBUG:
                     print("self.player created")
@@ -757,7 +820,7 @@ class InternetRadioAdapter(Adapter):
                 self.persistent_data['playing'] = True
                 self.set_status_on_thing("Playing")
                 
-                if also_call_volume:
+                if also_call_volume and self.respeaker_detected == False:
                     if self.DEBUG:
                         print("set_radio_state: alse setting volume")
                     time.sleep(1)
@@ -776,12 +839,16 @@ class InternetRadioAdapter(Adapter):
                 if self.player != None:
                     if self.DEBUG:
                         print("player object existed")
-                    self.player.stdin.write(b'q')
-                    self.player.stdin.flush()
+                    if self.respeaker_detected == False:
+                        self.player.stdin.write(b'q')
+                        self.player.stdin.flush()
                     self.player.terminate()
                     self.player.kill()
                     #os.system('pkill ffplay')
-                    os.system('pkill omxplayer')
+                    if self.respeaker_detected:
+                        os.system('pkill ffplay')
+                    else:
+                        os.system('pkill omxplayer')
                     self.player = None
                 
                 else:
@@ -800,7 +867,10 @@ class InternetRadioAdapter(Adapter):
         if self.DEBUG:
             print("Setting audio output volume to " + str(volume))
             print("self.player: " + str(self.player))
-        set_volume_via_radio_state = False
+        
+        set_volume_via_radio_state = False    
+        if self.respeaker_detected:
+            set_volume_via_radio_state = True # changes volume by completely restarting the player and giving it the new initial volume value
             
         if int(volume) != self.persistent_data['volume']:
             self.persistent_data['volume'] = int(volume)
@@ -812,7 +882,8 @@ class InternetRadioAdapter(Adapter):
                 print("Volume did not change")
                 
         try:
-            if self.player != None:
+            if self.player != None and self.respeaker_detected == False:
+                
                 if self.DEBUG:
                     print("Trying dbus volume")
 
@@ -825,14 +896,14 @@ class InternetRadioAdapter(Adapter):
                         print("trying dbus-send")
                     environment["DBUS_SESSION_BUS_ADDRESS"] = str(omxplayerdbus_user).strip()
                     environment["DISPLAY"] = ":0"
-                    
+                
                     if self.DEBUG:
                         print("environment: " + str(environment))
-                        
+                    
                     dbus_volume = volume / 100
                     if self.DEBUG:
                         print("dbus_volume: " + str(dbus_volume))
-                        
+                    
                     dbus_command = 'dbus-send --print-reply --session --reply-timeout=500 --dest=org.mpris.MediaPlayer2.omxplayer /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:"org.mpris.MediaPlayer2.Player" string:"Volume" double:' + str(dbus_volume)
                     #export DBUS_SESSION_BUS_ADDRESS=$(cat /tmp/omxplayerdbus.${USER:-root})
                     dbus_process = subprocess.Popen(dbus_command, 
@@ -842,19 +913,20 @@ class InternetRadioAdapter(Adapter):
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE,
                                     close_fds=True)
-                    
+                
                     stdout,stderr = dbus_process.communicate()
                     if len(stderr) > 4:
                         set_volume_via_radio_state = True
                     else:
                         set_volume_via_radio_state = False
-                        
+                    
                     if self.DEBUG:
                         print("dbus stdout: " + str(stdout))
                         print("dbus stderr: " + str(stderr))
-                    
+                
                     #dbus_result = dbus_process.stdout.read()
                     #dbus_process.stdout.close()
+                
                     
                     
         except Exception as ex:
@@ -873,118 +945,7 @@ class InternetRadioAdapter(Adapter):
 
 
 
-    # TODO: is anything using this?
-    def get_audio_volume(self):
-        try:
-            if sys.platform == 'darwin':
-                p = subprocess.run('osascript -e \'get volume settings\'', capture_output=True, shell=True)
-                if p.returncode != 0:
-                    print('Error trying to get volume')
-                    return None
-
-                stdout = p.stdout.decode()
-                lines = stdout.splitlines()
-                first = lines[0]
-                m = re.search(r'output volume:(\d+)', first)
-                if m is None:
-                    if self.DEBUG:
-                        print('Error trying to get volume')
-                    return None
-
-                return int(m.group(1))
-                
-            else:
-                #print(self.audio_controls)
-                for option in self.audio_controls:
-                    if str(self.persistent_data['audio_output']) == str(option["human_device_name"]):
-                        if self.DEBUG:
-                            print("  here is bingo, about to get current volume via linux amixer command")
-                        
-                        if option["control_name"] != None:
-                            command = 'amixer -c ' + str(option["card_id"]) + ' -M -q sget \'' + str(option["control_name"])  + '\''
-                            if self.DEBUG:
-                                print(command)
-                            #'amixer sget \'PCM\''
-                    
-                            try:
-                                p = subprocess.run(command, capture_output=True, shell=True)
-                                if p.returncode != 0:
-                                    if self.DEBUG:
-                                        print('Error trying to get volume from subproces')
-                                    return None
-
-                                stdout = p.stdout.decode()
-                                if len(stdout) > 0:
-                                    lines = stdout.splitlines()
-                                    last = lines[-1]
-                                    m = re.search(r'(\d+)%', last)
-                                    if m is None:
-                                        if self.DEBUG:
-                                            print('Error trying to get volume (m is None)')
-                                        return None
-
-                                    return int(m.group(1))
-                                
-                            except Exception as ex:
-                                print("error getting linux audio volume:" + str(ex))
-                            
-                        elif option["complex_control_id"] != None and option["complex_max"] != None:
-                            try:
-                                if self.DEBUG:
-                                    print("simple control was None - this device does not have simple volume control option. But it does have a complex control.")
-                            
-                                command = 'amixer -c ' + str(option["card_id"]) + ' cget numid=' + str(option["complex_control_id"])
-                                if self.DEBUG:
-                                    print(command)
-                                info_result = run_command(command) #amixer -c 1 cget numid=
-                                if self.DEBUG:
-                                    print(str(info_result))
-                                
-                                party = info_result.split(': values=')[1]
-                                if self.DEBUG:
-                                    print(str(party))
-                                
-                                
-                                value = int(party.split(',')[0])
-                                if self.DEBUG:
-                                    print("complexly gotten volume: " + str(value))
-                            
-                                volume_percentage = round( value * ( 100 / int(option["complex_max"]) ) )
-                                if self.DEBUG:
-                                    print("complexly gotten volume percentage: " + str(volume_percentage))
-                                
-                                return volume_percentage
-
-                            
-                            except Exception as ex:
-                                if self.DEBUG:
-                                    print("Error trying to get complex volume: " + str(ex))
-                            
-                            #for part in info_result_parts:
-                            #    if part.startswith('max='):
-                            #        complex_max = int(part)
-                            #        break
-                            
-                            
-                            
-                          #  numid=1,iface=PCM,name='Playback Channel Map'
-                          #    ; type=INTEGER,access=r----R--,values=2,min=0,max=36,step=0
-                          #    : values=0,0
-                          #    | container
-                          #      | chmap-fixed=FL,FR
-
-                            
-                        else:
-                            if self.DEBUG:
-                                print("Not enough info to get current volume")    
-                            
-                            
-                            
-                    #else:
-                return None # if nothing worked, it will end up here.
-                    
-        except Exception as ex:
-            print("Error trying to get volume: " + str(ex))
+    
 
 
 
