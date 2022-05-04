@@ -330,6 +330,7 @@
 				
                                 const now_playing_element = document.getElementById('extension-internet-radio-now-playing');
                                 try{
+                                    // /poll
                     		        window.API.postJson(
                     		          `/extensions/${this.id}/api/ajax`,
                                         {'action':'poll'}
@@ -389,12 +390,12 @@
                                             if(body['volume'] != this.previous_volume){
                                                 console.log("volume was changed elsewhere to: ", body['volume'] );
                                                 this.previous_volume = body['volume'];
-                                                if(this.playing){
-                                                    this.volume_indicator_countdown = 4;
-                                                    if(document.getElementById('extension-internet-radio-volume-indicator-container') != null){
-                                                        document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
-                                                    }
-                                                }
+                                                //if(this.playing){
+                                                    //this.volume_indicator_countdown = 4;
+                                                    //if(document.getElementById('extension-internet-radio-volume-indicator-container') != null){
+                                                    //    document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
+                                                    //}
+                                                //}
                                                 
                                                 
                                             }
@@ -410,6 +411,7 @@
                                     console.log("Error doing poll: ", e);
                                 }
                                 
+                                /*
                                 if(this.volume_indicator_countdown > 0){
                                     this.volume_indicator_countdown--;
                                     if(document.getElementById('extension-internet-radio-volume-indicator-container') != null){
@@ -418,6 +420,7 @@
                                         }
                                     }
                                 }
+                                */
 				
                 			}, 2000);
                         }
@@ -481,10 +484,12 @@
                             }
                             
                             // Show volume indicator
-                            this.volume_indicator_countdown = 4;
+                            //this.volume_indicator_countdown = 4;
                             this.previous_volume = body['volume'];
-                            document.getElementById('extension-internet-radio-volume-indicator-line').style.width = body['volume'] + "%";
-                            document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
+                            if(document.getElementById('extension-internet-radio-volume-indicator-line') != null){
+                                document.getElementById('extension-internet-radio-volume-indicator-line').style.width = body['volume'] + "%";
+                            }
+                            //document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
                             
                             
                             if(body.volume == 0){
@@ -507,13 +512,11 @@
                     }
                     var indicator2_el = document.createElement('div');
                     indicator2_el.setAttribute("id","extension-internet-radio-volume-indicator-line");
+                    indicator2_el.style.width = this.previous_volume + "%";
                     indicator_el.append(indicator2_el);
                     target_to_attach_buttons_to.append(indicator_el);
                     
-                    //this.volume_indicator_countdown = 4;
-                    if(document.getElementById('extension-internet-radio-volume-indicator-line') != null){
-                        document.getElementById('extension-internet-radio-volume-indicator-line').style.width = this.previous_volume + "%";
-                    }
+                    this.volume_indicator_countdown = 4;
                     
                 }
             
@@ -545,10 +548,7 @@
                             this.previous_volume = body['volume'];
                             if(document.getElementById('extension-internet-radio-volume-indicator-line') != null){
                                 document.getElementById('extension-internet-radio-volume-indicator-line').style.width = body['volume'] + "%";
-                                document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
-                            }
-                            else{
-                                console.log('Error, volume indicator did not exist');
+                                //document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
                             }
                             
         					//console.log(body);
