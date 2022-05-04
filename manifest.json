@@ -28,6 +28,7 @@
     "default": {
 	  "Show buttons everywhere": false,
 	  "Do not get song details": false,
+	  "Use FFPlay instead of OMX Player": false,
       "Debugging": false
     },
     "schema": {
@@ -40,6 +41,10 @@
           "type": "boolean",
           "description": "Normally the addon will try to request the currently playing song's name and artist data every 20 seconds. If you don't care about this, you can disable it."
 		},
+        "Use FFPlay instead of OMX Player": {
+          "type": "boolean",
+          "description": "Advanced. You can select which audio player is used. Normally OMX Player is used, since it is less likely to lose stream connections, allows for gapless changing of volume, and can output to HDMI and the headphone jack at the same time. FFPlay is the fallback when a ReSpeaker hat is detected, but you can make it the default if you prefer."
+        },
         "Debugging": {
           "type": "boolean",
           "description": "Advanced. Debugging allows you to diagnose any issues with the add-on. If enabled it will result in a lot more debug data in the internal log (which can be found under settings -> developer -> view internal logs)."
@@ -50,7 +55,7 @@
     }
   },
   "short_name": "Radio",
-  "version": "2.1.22",
+  "version": "2.1.23",
   "web_accessible_resources": [
     "css/*.css",
     "images/*.svg",
