@@ -3,7 +3,10 @@
 # test commands to play radio: 
 # ffplay -nodisp -vn -infbuf -autoexit http://direct.fipradio.fr/live/fip-midfi.mp3 -volume 100
 # SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=00:00:00:00:00:00 ffplay -nodisp -vn -infbuf -autoexit http://direct.fipradio.fr/live/fip-midfi.mp3 -volume 100
+
+# omxplayer -o local --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5 http://live.dancemusic.ro:7000/stream
 # omxplayer -o alsa:bluealsa http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
+
 
 import os
 import re
@@ -85,6 +88,7 @@ class InternetRadioAdapter(Adapter):
         self.current_stream_has_now_playing_info = True
         self.player = None
         self.get_song_details = True
+        self.output_to_both = False
         
         self.clock_active = True  # TODO used to circumvent the clock thread for now, as an experiment
         
@@ -320,6 +324,11 @@ class InternetRadioAdapter(Adapter):
                 self.get_song_details = not bool(config['Do not get song details'])
                 if self.DEBUG:
                     print("Do not get song details preference was in config: " + str(not self.get_song_details))
+
+            if "Output music to both ports" in config:
+                self.output_to_both = bool(config['Output music to both ports'])
+                if self.DEBUG:
+                    print("Output music to both ports preference was in config: " + str(self.output_to_both))
 
             if "Use FFPlay instead of OMX Player" in config:
                 ffplay_preference = bool(config['Use FFPlay instead of OMX Player'])
@@ -792,7 +801,15 @@ class InternetRadioAdapter(Adapter):
                                         stderr=subprocess.PIPE)
                     
                 else:
-                    omx_output = "both"
+                    
+                    if self.persistent_data['audio_output'] == 'Built-in headphone jack':
+                        omx_output = "local"
+                    else:
+                        omx_output = "hdmi"
+                    
+                    if self.output_to_both:
+                        omx_output = "both"
+                    
                     if bt_connected:
                         omx_output = "alsa:bluealsa"
 				
