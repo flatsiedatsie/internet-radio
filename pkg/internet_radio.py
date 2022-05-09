@@ -6,7 +6,7 @@
 
 # omxplayer -o local --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5 http://live.dancemusic.ro:7000/stream
 # omxplayer -o alsa:bluealsa http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
-
+# omxplayer -o alsa:sysdefault http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
 
 import os
 import re
@@ -802,10 +802,12 @@ class InternetRadioAdapter(Adapter):
                     
                 else:
                     
-                    if self.persistent_data['audio_output'] == 'Built-in headphone jack':
-                        omx_output = "local"
-                    else:
-                        omx_output = "hdmi"
+                    #if self.persistent_data['audio_output'] == 'Built-in headphone jack':
+                    #    omx_output = "local"
+                    #else:
+                    #    omx_output = "hdmi"
+                    
+                    omx_output = "alsa:sysdefault"
                     
                     if self.output_to_both:
                         omx_output = "both"
