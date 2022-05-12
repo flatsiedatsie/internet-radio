@@ -177,7 +177,7 @@ class InternetRadioAdapter(Adapter):
 
         # LOAD CONFIG
 
-        self.persistent_data['current_stream_url'] = None
+        # self.persistent_data['current_stream_url'] = None
         self.radio_stations_names_list = []
 
         try:
@@ -189,9 +189,11 @@ class InternetRadioAdapter(Adapter):
         if 'playing' not in self.persistent_data:
             self.persistent_data['playing'] = False
 
-
         if 'bluetooth_device_mac' not in self.persistent_data:
             self.persistent_data['bluetooth_device_mac'] = None
+            
+        if 'current_stream_url' not in self.persistent_data:
+            self.persistent_data['current_stream_url'] = None
 
 
         # Start the API handler
@@ -302,6 +304,7 @@ class InternetRadioAdapter(Adapter):
 
         try:
             if not config:
+                self.close_proxy()
                 return
 
             if 'Debugging' in config:
@@ -344,7 +347,7 @@ class InternetRadioAdapter(Adapter):
                     print("self.persistent_data['stations'] was in config. It has not been moved to persistent data.")
 
         except Exception as ex:
-            print("Error loading radio stations: " + str(ex))
+            print("Error in add_from_config: " + str(ex))
 
 
 
