@@ -299,12 +299,12 @@ class InternetRadioAdapter(Adapter):
             database.close()
 
         except:
-            print("Error. Failed to open settings database. Closing proxy.")
-            self.close_proxy()
-
+            print("Error. Failed to open settings database.")
+            return
+            
         try:
             if not config:
-                self.close_proxy()
+                print("Error, no config data available")
                 return
 
             if 'Debugging' in config:
@@ -342,7 +342,6 @@ class InternetRadioAdapter(Adapter):
 
             if 'Radio stations' in config and len(self.persistent_data['stations']) == 0:
                 self.persistent_data['stations'] = config['Radio stations']
-                #self.persistent_data['stations'] = config['Radio stations']
                 if self.DEBUG:
                     print("self.persistent_data['stations'] was in config. It has not been moved to persistent data.")
 
