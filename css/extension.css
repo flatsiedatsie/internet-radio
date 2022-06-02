@@ -21,6 +21,8 @@
   	font-size: 1.6rem;
   	color: #fff;
 	height:auto;
+    max-width:80rem;
+    margin:0 auto;
 }
 
 
@@ -991,17 +993,19 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-ind
 
 @media screen and (min-width: 1025px) {
 	#extension-internet-radio-view{
+        height:100vh; 
+        /*
 		left:9.6rem;
 		top: 0;
-		height:100vh; 
 		position:absolute;
 		width: calc(100% - 9.6rem);
 		padding-right:9.6rem;
+        */
 	}
 	
 	#extension-internet-radio-content-container{
 		height:auto;
-		width: calc(100% - 3rem);
+		/*width: calc(100% - 3rem);*/
 	}
     
     #extension-internet-radio-tabs-container > div{
