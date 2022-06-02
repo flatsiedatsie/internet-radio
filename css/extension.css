@@ -4,19 +4,19 @@
   	height: 100%; /*calc(100% - 7.6rem);*/
   	box-sizing: border-box;
 	overflow: auto;
-	position: absolute;
-	top: 7.6rem;
+	/*position: absolute;
+	top: 7.6rem;*/
 	left: 0;
-	padding: 2rem;
+	/*padding: 2rem;*/
+    padding:2rem;
 }
 
 
 #extension-internet-radio-content {
-	display:flex;
+	/*display:flex;
 	flex-direction: column;
-	flex-direction: column;
-	overflow: auto;
-  	position: relative;
+	overflow: auto;*/
+  	/*position: relative;*/
   	text-align: left;
   	font-size: 1.6rem;
   	color: #fff;
@@ -63,6 +63,8 @@
     display:none;
     justify-content:center;
     align-items: center;
+    margin:0 auto;
+    width:calc(100% - 14rem);
     margin-top:2rem;
 }
 .extension-internet-radio-playing #extension-internet-radio-now-playing-container{
@@ -172,7 +174,7 @@
     padding:1rem;
     border-radius:.5rem;
     margin-right:2rem;
-    width:100%;
+    width:75%;
 }
 
 #extension-internet-radio-countries-dropdown,
@@ -407,10 +409,16 @@
     top: 0rem;
     left: 0rem;
     position: fixed;
-    padding: 2rem 0 0 2rem;
+    /*padding: 2rem 0 0 2rem;*/
     width: 7.6rem;
     height: 7.6rem;
-    z-index: 1000;
+    /*z-index: 10001;*/
+    /*-webkit-transform: translate3d(0,0,1px);
+    transform: translate3d(0,0,1px);*/
+    /*z-index:10001;
+    -webkit-transform: translate3d(0,0,1px);
+    transform: translate3d(0,0,1px);
+    pointer-events: none;*/
 }
 #extension-internet-radio-back-button{
     border-radius: 2.8rem;
@@ -423,13 +431,19 @@
     -ms-user-select: none;
     user-select: none;
     outline: 0;
-    cursor: default;
+    cursor: pointer;
     overflow:hidden;
     opacity:1;
-    cursor:pointer;
+    
     background: #5d9bc7 no-repeat center/100% url(/images/back.png);
     background-size:5.6rem;
     box-shadow: 0 1px 3px rgb(0 0 0 / 6%), 0 1px 2px rgb(0 0 0 / 12%);
+    
+    /*
+    position: fixed;
+    z-index:10002;
+    -webkit-transform: translate3d(0,0,2px);
+    transform: translate3d(0,0,2px);*/
 }
 #extension-internet-radio-back-button:hover{
     background-color: #6dabd7;
@@ -739,7 +753,8 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-toggle-but
 }
 
 body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-up-button,
-body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-down-button{
+body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-down-button,
+body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-indicator-container{
     display:none;
 }
 
@@ -906,14 +921,21 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-dow
 
 
 @media screen and (max-width: 640px) {
-    #extension-internet-radio-volume-up-button{display:none;}
-    #extension-internet-radio-volume-down-button{display:none;}
+    /*
+    .extension-internet-radio-playing #extension-internet-radio-volume-up-button,
+    #extension-internet-radio-volume-up-button,
+    .extension-internet-radio-playing #extension-internet-radio-volume-up-button,
+    #extension-internet-radio-volume-down-button,
+    .extension-internet-radio-playing #extension-internet-radio-volume-indicator-container,
+    #extension-internet-radio-volume-indicator-container{display:none;}
+    
+    
     body:not(.extension-internet-radio-playing) #extension-internet-radio-toggle-button{display:none;}
-
+    */
+    /*
     #extension-internet-radio-now-playing:not(:empty)::before{
         display:block;
-        text-align:center;
-    }
+    }*/
     
     #extension-internet-radio-text-input-container{
         flex-wrap:wrap;
@@ -940,6 +962,21 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-dow
     #extension-internet-radio-search-page .extension-internet-radio-item-left{
         align-self:center;
     }
+    
+    #extension-internet-radio-stations-list > .extension-internet-radio-item{
+        margin: 2rem 2rem 2rem 4rem;
+        min-width:24rem;
+    }
+    
+    .extension-internet-radio-item-action-button{
+        margin-left:auto;
+    }
+    
+    #extension-internet-radio-now-playing-container{
+        margin:2rem 0 0 8rem;
+        width:calc(100% - 8rem);
+    }
+    
 }
 
 @media screen and (min-width: 641px) {

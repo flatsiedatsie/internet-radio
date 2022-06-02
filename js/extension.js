@@ -133,7 +133,8 @@
             // Search input button press
 			document.getElementById('extension-internet-radio-search-button').addEventListener('click', (event) => {
 				//console.log("send button clicked");
-				this.send_search();
+                this.send_search();
+                
 			});
 			
             
@@ -218,6 +219,9 @@
             document.getElementById('extension-internet-radio-add-button').addEventListener('click', (event) => {
                 document.getElementById('extension-internet-radio-search-page').style.display = 'block';
                 document.getElementById('extension-internet-radio-stations-page').style.display = 'none';
+                
+                document.getElementById('extension-internet-radio-back-button-container').classList.remove('extension-internet-radio-hidden');
+                
                 this.searching = true;
                 // Only query the distribution server once
                 if(!this.entered_search_page){
@@ -234,7 +238,10 @@
     			}
     			catch(e){
     				//console.log("internet radio: could not stop audio in browser? " + e);
-    			}    
+    			}
+                
+                // get a z-index above the main menu button while overlay with back button is active
+                document.getElementById('extension-internet-radio-view').style.zIndex = '101';
                 
 			});
 				
@@ -243,8 +250,13 @@
                 document.getElementById('extension-internet-radio-search-page').style.display = 'none';
                 document.getElementById('extension-internet-radio-stations-page').style.display = 'block';
                 document.getElementById('extension-internet-radio-input-popup').classList.add('extension-internet-radio-hidden');
+                document.getElementById('extension-internet-radio-back-button-container').classList.add('extension-internet-radio-hidden');
+
                 this.get_init_data();
                 this.searching = false;
+                
+                // drop down to normal z-index
+                document.getElementById('extension-internet-radio-view').style.zIndex = 'auto';
                 
     			try{
                     this.stop_audio_in_browser();
@@ -507,9 +519,9 @@
                 if(document.getElementById('extension-internet-radio-volume-indicator-container') == null){
                     var indicator_el = document.createElement('div');
                     indicator_el.setAttribute("id","extension-internet-radio-volume-indicator-container");
-                    if(this.playing == false){
-                        indicator_el.classList.add('extension-internet-radio-hidden');
-                    }
+                    //if(this.playing == false){
+                    //    indicator_el.classList.add('extension-internet-radio-hidden');
+                    //}
                     var indicator2_el = document.createElement('div');
                     indicator2_el.setAttribute("id","extension-internet-radio-volume-indicator-line");
                     indicator2_el.style.width = this.previous_volume + "%";
@@ -937,12 +949,18 @@
 					    //console.log("event: ", event);
                         //console.log(event.path[2]);
                         
-                        const playing_items = document.querySelectorAll('.extension-internet-radio-item-playing');
-                        for (var i = 0; i < playing_items.length; ++i) {
-                            playing_items[i].classList.remove('extension-internet-radio-item-playing');
+                        try{
+                            const playing_items = document.querySelectorAll('.extension-internet-radio-item-playing');
+                            for (var i = 0; i < playing_items.length; ++i) {
+                                playing_items[i].classList.remove('extension-internet-radio-item-playing');
+                            }
+                            event.path[2].classList.add('extension-internet-radio-item-playing');
+                            document.getElementById('extension-internet-radio-now-playing').innerText = "";
                         }
-                        event.path[2].classList.add('extension-internet-radio-item-playing');
-                        document.getElementById('extension-internet-radio-now-playing').innerText = "";
+                        catch (e){
+                            console.log('Error with play button: ', e);
+                        }
+                        
                         
                         //console.log("play");
                         const play_url = event.target.dataset.stream_url;
