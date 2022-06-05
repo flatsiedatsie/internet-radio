@@ -21,7 +21,7 @@
   	font-size: 1.6rem;
   	color: #fff;
 	height:auto;
-    max-width:80rem;
+    max-width:130rem;
     margin:0 auto;
 }
 
@@ -100,12 +100,14 @@
     align-items:center;
     justify-content:center;
     flex-direction:column;
+    margin: 0 6rem;
 }
 
 #extension-internet-radio-tabs-container > div{
     box-sizing:border-box;
     /*background-color:rgba(255,255,255,.1);
     margin: 2rem;*/
+    padding-top:2rem;
 }
 
 #extension-internet-radio-stations-page{
@@ -125,16 +127,24 @@
     display:flex;
     flex-wrap:wrap;
     justify-content:center;
+    /*
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 24rem);
+    grid-gap: 2rem;
+    */
 }
 
 #extension-internet-radio-stations-list > .extension-internet-radio-item{
-    width: 20rem;
-    min-width:30rem;
+    width: 100%;
+    min-width:15rem;
     max-width:80rem;
+    /*
     margin:2rem;
-    /*flex-grow: 1;
-    flex-shrink: 1;*/
-    position:relative
+    flex-grow: 1;
+    flex-shrink: 1;
+    */
+    position:relative;
+    margin-bottom:2rem;
 }
 
 
@@ -279,14 +289,9 @@
 	/*background-color: #46769C;*/
     background-color:rgba(0,0,0,.2);
 	border-radius:.5rem;
-	margin-top:1rem;
 	border-radius: .5rem;
 	position: relative;
 	width:100%;
-}
-
-.extension-internet-radio-item{
-	margin-top: 4rem;
 }
 
 
@@ -346,7 +351,6 @@
 #extension-internet-radio-stations-list .extension-internet-radio-item-action-button{
     width:2rem;
     height:2rem;
-
 }
 
 
@@ -964,11 +968,12 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-ind
     #extension-internet-radio-search-page .extension-internet-radio-item-left{
         align-self:center;
     }
-    
+    /*
     #extension-internet-radio-stations-list > .extension-internet-radio-item{
         margin: 2rem 2rem 2rem 4rem;
         min-width:24rem;
     }
+    */
     
     .extension-internet-radio-item-action-button{
         margin-left:auto;
@@ -991,6 +996,17 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-ind
 }
 
 
+@media screen and (min-width: 810px) {
+    #extension-internet-radio-stations-list{
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 30rem);
+        grid-gap: 2rem;
+    }
+    #extension-internet-radio-stations-list > .extension-internet-radio-item{
+        margin-bottom:0;
+    }
+}
+
 @media screen and (min-width: 1025px) {
 	#extension-internet-radio-view{
         height:100vh; 
@@ -1009,13 +1025,14 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-ind
 	}
     
     #extension-internet-radio-tabs-container > div{
-        padding:2rem;
+        padding:2rem 10rem;
+        box-sizing:border-box;
     }
     
     #extension-internet-radio-text-input-container{
         padding: 2rem 0;
     }
-	
+    
 	/*
 	.extension-internet-radio-item{
 		width: calc(50% - 4rem);
