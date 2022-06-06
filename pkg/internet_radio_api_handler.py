@@ -94,14 +94,25 @@ class InternetRadioAPIHandler(APIHandler):
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'playing' : self.adapter.persistent_data['playing'], 'volume':self.adapter.persistent_data['volume'], 'debug': self.adapter.DEBUG, 'stations':self.adapter.persistent_data['stations'], 'station':self.adapter.persistent_data['station'], 'show_buttons_everywhere':self.adapter.show_buttons_everywhere}),
+                          content=json.dumps({'playing' : self.adapter.persistent_data['playing'], 
+                                              'volume':self.adapter.persistent_data['volume'], 
+                                              'debug': self.adapter.DEBUG, 
+                                              'stations':self.adapter.persistent_data['stations'], 
+                                              'station':self.adapter.persistent_data['station'], 
+                                              'show_buttons_everywhere':self.adapter.show_buttons_everywhere
+                                          }),
                         )
                         
                     elif action == 'poll':
                         return APIResponse(
                           status=200,
                           content_type='application/json',
-                          content=json.dumps({'state' : 'ok', 'playing': self.adapter.persistent_data['playing'],'now_playing':self.adapter.now_playing, 'station': self.adapter.persistent_data['station'], 'volume':self.adapter.persistent_data['volume']}),
+                          content=json.dumps({'state' : 'ok', 
+                                              'playing': self.adapter.persistent_data['playing'],
+                                              'now_playing':self.adapter.now_playing, 
+                                              'station': self.adapter.persistent_data['station'], 
+                                              'volume':self.adapter.persistent_data['volume']
+                                          }),
                         )
                         
                     elif action == 'add':

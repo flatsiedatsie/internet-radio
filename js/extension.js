@@ -370,6 +370,16 @@
                                             }
                                             
                                         }
+                                        
+                                        
+                                        // Volume
+                                        if(typeof body.volume != 'undefined'){
+                                            //this.previous_volume = body['volume'];
+                                            if(document.getElementById('extension-internet-radio-volume-indicator-line') != null){
+                                                document.getElementById('extension-internet-radio-volume-indicator-line').style.width = body['volume'] + "%";
+                                                //document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
+                                            }
+                                        }
                         
                                         // Now_playing
                                         if(typeof body.now_playing == 'string'){
