@@ -827,22 +827,26 @@ class InternetRadioAdapter(Adapter):
                 
                     command_array = omx_command.split(' ')
                 
-                    #environment = os.environ.copy()
-                    #environment["DISPLAY"] = ":0"
+                    environment = os.environ.copy()
+                    environment["DISPLAY"] = ":0"
                 
                     self.player = subprocess.Popen(command_array, 
-                                        #env=environment,
+                                        env=environment,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
                                         bufsize=0,
                                         close_fds=True)
+                                        
+                    self.set_audio_volume(self.persistent_data['volume'])
                 
                 if self.DEBUG:
                     print("self.player created")
                 
                 self.persistent_data['playing'] = True
                 self.set_status_on_thing("Playing")
+                
+                
                 
                 if also_call_volume and self.respeaker_detected == False:
                     if self.DEBUG:
@@ -895,6 +899,7 @@ class InternetRadioAdapter(Adapter):
         set_volume_via_radio_state = False    
         if self.respeaker_detected:
             set_volume_via_radio_state = True # changes volume by completely restarting the player and giving it the new initial volume value
+            print("set_audio_volume: set_volume_via_radio_state is true")
             
         if int(volume) != self.persistent_data['volume']:
             self.persistent_data['volume'] = int(volume)
@@ -951,7 +956,34 @@ class InternetRadioAdapter(Adapter):
                     #dbus_result = dbus_process.stdout.read()
                     #dbus_process.stdout.close()
                 
-                    
+                
+                
+                    # Check that omxplayer wasn't doubled..
+                    ps = run_command("ps -aux | grep '/usr/bin/omxplayer.bin'")
+                    #ps = run_command('ps -ef | grep omxplayer | grep /bin/bash')
+
+                    processes = ps.split('\n')
+
+                    omx_count = 0
+                    nfields = len(processes[0].split()) - 1
+                    for row in processes[1:]:
+                        if 'grep' in row:
+                            #print("skipping grep line")
+                            continue
+                        #print(" -->  " + str(row))
+                        parts = row.split(None, nfields)
+                        
+                        if omx_count > 0:
+                            #print("parts[1]: " + str(parts))
+                            if len(parts) > 0:
+                                print("TOO MANY OMX PLAYERS. Killing one.")
+                                run_command('kill -9 ' + str(parts[1]))
+                            
+                        if 'defunct' not in row:
+                            omx_count += 1
+            
+            else:
+                self.set_radio_state(self.persistent_data['power'],False)
                     
         except Exception as ex:
             print("Error trying to set volume via dbus: " + str(ex))
@@ -963,7 +995,7 @@ class InternetRadioAdapter(Adapter):
         if set_volume_via_radio_state:
             if self.DEBUG:
                 print("WARNING: setting radio volume by restarting audio player instead")
-            self.set_radio_state(self.persistent_data['power'],False)
+            #self.set_radio_state(self.persistent_data['power'],False)
 
         return
 

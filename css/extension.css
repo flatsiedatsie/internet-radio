@@ -643,8 +643,10 @@ body.zoom2 #extension-internet-radio-volume-up-button{
     -webkit-user-select: none;
     -ms-user-select: none;
     user-select: none;
-    width: 5.6rem;
-    height: 5.6rem;
+    /*width: 5.6rem;
+    height: 5.6rem;*/
+    width:5rem;
+    height:5rem;
     border-radius: 2.8rem;
     background-color:rgba(0,0,0,.8);
     border:2px solid transparent;
