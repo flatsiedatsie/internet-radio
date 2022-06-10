@@ -976,7 +976,8 @@ class InternetRadioAdapter(Adapter):
                         if omx_count > 0:
                             #print("parts[1]: " + str(parts))
                             if len(parts) > 0:
-                                print("TOO MANY OMX PLAYERS. Killing one.")
+                                if self.DEBUG:
+                                    print("TOO MANY OMX PLAYERS. Killing one.")
                                 run_command('kill -9 ' + str(parts[1]))
                             
                         if 'defunct' not in row:
