@@ -127,6 +127,7 @@
     display:flex;
     flex-wrap:wrap;
     justify-content:center;
+    margin-top:2rem;
     /*
     display: grid;
     grid-template-columns: repeat(auto-fill, 24rem);
@@ -178,6 +179,9 @@
 	margin-top:4rem;
 	padding:2rem;
     justify-content:center;
+}
+#extension-internet-radio-text-input-container > *{
+    margin-bottom:1rem;
 }
 
 
@@ -292,8 +296,8 @@
 	border-radius: .5rem;
 	position: relative;
 	width:100%;
+    margin-bottom:2rem;
 }
-
 
 .extension-internet-radio-item-left{
 	padding:1.5rem 0rem 0 2rem
@@ -657,8 +661,17 @@ body.zoom2 #extension-internet-radio-volume-up-button{
 .extension-internet-radio-item-playing .extension-internet-radio-play-icon{
     /*background-color:rgba(172,255,172,.5);*/
     border:2px solid orange;
+    display:none;
 }
 
+.extension-internet-radio-pause-icon{
+    display:none;
+}
+/*
+.extension-internet-radio-item-playing .extension-internet-radio-pause-icon{
+    display:inline-block;
+}
+*/
 
 .extension-internet-radio-preview{
     background-color:rgba(0,0,0,.2);
@@ -952,6 +965,10 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-ind
         margin-bottom:1rem;
     }
     
+    .extension-internet-radio-item{
+        flex-direction:column;
+    }
+
     #extension-internet-radio-search-page .extension-internet-radio-item{
         flex-direction:column;
     }
@@ -982,6 +999,15 @@ body:not(.extension-internet-radio-playing) #extension-internet-radio-volume-ind
     #extension-internet-radio-now-playing-container{
         margin:2rem 0 0 8rem;
         width:calc(100% - 8rem);
+    }
+    
+    #extension-internet-radio-search-button,
+    #extension-internet-radio-view select,
+    #extension-internet-radio-countries-dropdown,
+    #extension-internet-radio-search-field{
+        width:100%;
+        margin-right:0;
+        max-width:100%;
     }
     
 }

@@ -664,6 +664,9 @@ class InternetRadioAdapter(Adapter):
             #  turn on
             #
             if power:
+                
+                environment = os.environ.copy()
+                
                 if self.player != None:
                     if self.DEBUG:
                         print("set_radio_state: warning, the player already existed. Stopping it first.")
@@ -680,17 +683,17 @@ class InternetRadioAdapter(Adapter):
                 else:
                     if self.DEBUG:
                         print("self.player was still None")
-                       
-                       
-                if self.respeaker_detected:
-                    if self.DEBUG:
-                        print("pkill omxplayer")
-                    os.system('pkill omxplayer')
+                         
+                #if self.respeaker_detected:
+                if self.DEBUG:
+                    print("pkill omxplayer")
+                os.system('pkill omxplayer')
                     
-                else:
-                    if self.DEBUG:
-                        print("pkill ffplay")
-                    os.system('pkill ffplay')
+                
+                if self.DEBUG:
+                    print("pkill ffplay")
+                os.system('pkill ffplay')
+                
                 self.player = None
                 
                 # Checking audio output option
@@ -766,7 +769,7 @@ class InternetRadioAdapter(Adapter):
                 
                 if self.respeaker_detected:
                     
-                    environment = os.environ.copy()
+                    
                     
                     if bt_connected:
                     
@@ -1220,7 +1223,7 @@ class InternetRadioDevice(Device):
                             "power",
                             {
                                 '@type': 'OnOffProperty',
-                                'title': "State",
+                                'title': "Playing",
                                 'readOnly': False,
                                 'type': 'boolean'
                             },

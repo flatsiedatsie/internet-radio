@@ -449,6 +449,9 @@
             			
                         
                     }
+                    if(document.getElementById('extension-internet-radio-loading') != null){
+                        document.getElementById('extension-internet-radio-loading').style.display = 'none';
+                    }
                     
 
 					
