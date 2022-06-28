@@ -265,66 +265,53 @@ class InternetRadioAdapter(Adapter):
         #print("internet radio adapter init complete")
 
 
-        if self.DEBUG:
-            print("Init: starting the internal clock")
-        try:
-            # Restore the timers, alarms and reminders from persistence.
-            #if 'action_times' in self.persistent_data:
-            #    if self.DEBUG:
-            #        print("loading action times from persistence") 
-            #    self.persistent_data['action_times'] = self.persistent_data['action_times']
-
-            self.t = threading.Thread(target=self.clock, args=(self.voice_messages_queue,))
-            self.t.daemon = True
-            self.t.start()
-        except:
-            print("Error starting the clock thread")
-
-
         self.ready = True
 
 
-        if self.get_song_details:
-            
-            defunct_count = 0
-            
-            while self.running: # and self.player != None
-                time.sleep(1)
-            
-                if self.persistent_data['playing'] == True:
-                    try:
-                        #if self.DEBUG:
-                        #    print(str(self.adapter.poll_counter))
-                        if self.poll_counter == 0:
-                            self.now_playing = self.get_artist()
-                    except Exception as ex:
-                        print("error updating now_playing: " + str(ex))
-            
-                    #if self.adapter.playing:
-                    self.poll_counter += 1
-                    if self.poll_counter > 20:
-                        self.poll_counter = 0
-                    
-                    # Every 3 seconds check if the music player hasn't crashed. If this seems the case twice in a row, restart the player
-                    if self.poll_counter % 3 == 0:
-                        defunct_check = run_command("ps aux | grep 'omxplayer'")
-            
-                        if "[omxplayer] <defunct>" in defunct_check:
-                            if self.DEBUG:
-                                print("omx player may have crashed, spotted 'defunct'")
-            
-                            defunct_count += 1
+
+        defunct_count = 0
+        
+        while self.running: # and self.player != None
+            time.sleep(1)
+        
+            if self.persistent_data['playing'] == True:
+                #if self.DEBUG:
+                #    print(str(self.adapter.poll_counter))
                 
-                            if defunct_count > 1:
-                                if self.DEBUG:
-                                    print("restarting crashed omx player")
-                                defunct_count = -5
-                                self.set_radio_state(True)
-                        else:
-                            defunct_count = 0
-                    
-                else:
-                    defunct_count = 0
+                # done this way to immediately call get_artist when the player starts
+                if self.poll_counter == 0:
+                    if self.get_song_details:
+                        self.now_playing = self.get_artist()
+                
+                #if self.adapter.playing:
+                self.poll_counter += 1
+                if self.poll_counter > 20:
+                    self.poll_counter = 0
+                
+                # Every 3 seconds check if the music player hasn't crashed. If this seems the case twice in a row, restart the player
+                if self.poll_counter % 3 == 0:
+                    defunct_check = run_command("ps aux | grep 'omxplayer'")
+        
+                    if "[omxplayer] <defunct>" in defunct_check:
+                        if self.DEBUG:
+                            print("omx player may have crashed, spotted 'defunct'")
+        
+                        defunct_count += 1
+            
+                        if defunct_count > 1:
+                            if self.DEBUG:
+                                print("spotted 'defunct' twice in a row. Restarting crashed omx player")
+                            defunct_count = -5
+                            self.set_radio_state(True)
+                    else:
+                        defunct_count = 0
+                
+            else:
+                defunct_count = 0
+
+        
+            
+            
 
 
 
