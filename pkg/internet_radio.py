@@ -855,7 +855,7 @@ class InternetRadioAdapter(Adapter):
                         if bt_connected:
                             omx_output = "alsa:bluealsa"
 				
-                        omx_command = "LD_LIBRARY_PATH=/opt/vc/lib omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
+                        omx_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
                         if self.DEBUG:
                             print("\nOMX Player command: " + str(omx_command))
                         #omxplayer -o alsa:bluealsa
@@ -864,7 +864,8 @@ class InternetRadioAdapter(Adapter):
                 
                         environment = os.environ.copy()
                         environment["DISPLAY"] = ":0"
-                
+                        environment["LD_LIBRARY_PATH"] = "/opt/vc/lib"
+                        
                         self.player = subprocess.Popen(command_array, 
                                             env=environment,
                                             stdin=subprocess.PIPE,
