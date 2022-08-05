@@ -8,6 +8,8 @@
 # omxplayer -o alsa:bluealsa http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
 # omxplayer -o alsa:sysdefault http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
 
+# LD_LIBRARY_PATH=/opt/vc/lib omxplayer -o alsa:sysdefault http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
+
 import os
 import re
 import sys
@@ -801,93 +803,97 @@ class InternetRadioAdapter(Adapter):
                 
                
                 
-                
-                if self.respeaker_detected:
+                try:
+                    if self.respeaker_detected:
+                    
+                        if bt_connected:
+                    
+                            environment["SDL_AUDIODRIVER"] = "alsa"
+                            #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
+                            environment["AUDIODEV"] = "bluealsa:00:00:00:00:00:00"
+                    
+                            #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.persistent_data['bluetooth_device_mac']) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
+                            my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
                     
                     
-                    
-                    if bt_connected:
-                    
-                        environment["SDL_AUDIODRIVER"] = "alsa"
-                        #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
-                        environment["AUDIODEV"] = "bluealsa:00:00:00:00:00:00"
-                    
-                        #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.persistent_data['bluetooth_device_mac']) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
-                        my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
-                    
-                    
-                        if self.DEBUG:
-                            print("Internet radio addon will call this subprocess command: " + str(my_command))
-                            print("starting ffplay...")
-                        self.player = subprocess.Popen(my_command, 
-                                        env=environment,
-                                        shell=True,
-                                        stdin=subprocess.PIPE,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
+                            if self.DEBUG:
+                                print("Internet radio addon will call this subprocess command: " + str(my_command))
+                                print("starting ffplay...")
+                            self.player = subprocess.Popen(my_command, 
+                                            env=environment,
+                                            shell=True,
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE)
                 
                 
-                    else:
-                        #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
-                        my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit","-volume",str(self.persistent_data['volume']), str(self.persistent_data['current_stream_url']) )
+                        else:
+                            #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
+                            my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit","-volume",str(self.persistent_data['volume']), str(self.persistent_data['current_stream_url']) )
 
-                        if self.DEBUG:
-                            print("Internet radio addon will call this subprocess command: " + str(my_command))
-                            print("starting ffplay...")
-                        self.player = subprocess.Popen(my_command, 
-                                        env=environment,
-                                        stdin=subprocess.PIPE,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
+                            if self.DEBUG:
+                                print("Internet radio addon will call this subprocess command: " + str(my_command))
+                                print("starting ffplay...")
+                            self.player = subprocess.Popen(my_command, 
+                                            env=environment,
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE)
                     
-                else:
+                    else:
                     
-                    #if self.persistent_data['audio_output'] == 'Built-in headphone jack':
-                    #    omx_output = "local"
-                    #else:
-                    #    omx_output = "hdmi"
+                        #if self.persistent_data['audio_output'] == 'Built-in headphone jack':
+                        #    omx_output = "local"
+                        #else:
+                        #    omx_output = "hdmi"
                     
-                    omx_output = "alsa:sysdefault"
+                        omx_output = "alsa:sysdefault"
                     
-                    if self.output_to_both:
-                        omx_output = "both"
+                        if self.output_to_both:
+                            omx_output = "both"
                     
-                    if bt_connected:
-                        omx_output = "alsa:bluealsa"
+                        if bt_connected:
+                            omx_output = "alsa:bluealsa"
 				
-                    omx_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
-                    if self.DEBUG:
-                        print("\nOMX Player command: " + str(omx_command))
-                    #omxplayer -o alsa:bluealsa
+                        omx_command = "LD_LIBRARY_PATH=/opt/vc/lib omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
+                        if self.DEBUG:
+                            print("\nOMX Player command: " + str(omx_command))
+                        #omxplayer -o alsa:bluealsa
                 
-                    command_array = omx_command.split(' ')
+                        command_array = omx_command.split(' ')
                 
-                    environment = os.environ.copy()
-                    environment["DISPLAY"] = ":0"
+                        environment = os.environ.copy()
+                        environment["DISPLAY"] = ":0"
                 
-                    self.player = subprocess.Popen(command_array, 
-                                        env=environment,
-                                        stdin=subprocess.PIPE,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE,
-                                        bufsize=0,
-                                        close_fds=True)
+                        self.player = subprocess.Popen(command_array, 
+                                            env=environment,
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            bufsize=0,
+                                            close_fds=True)
                                         
-                    self.set_audio_volume(self.persistent_data['volume'])
+                        self.set_audio_volume(self.persistent_data['volume'])
                 
-                if self.DEBUG:
-                    print("self.player created")
-                
-                self.persistent_data['playing'] = True
-                self.set_status_on_thing("Playing")
-                
-                
-                
-                if also_call_volume and self.respeaker_detected == False:
                     if self.DEBUG:
-                        print("set_radio_state: alse setting volume")
-                    time.sleep(1)
-                    self.set_audio_volume(self.persistent_data['volume'])
+                        print("self.player created")
+                
+                    self.persistent_data['playing'] = True
+                    self.set_status_on_thing("Playing")
+                
+                
+                
+                    if also_call_volume and self.respeaker_detected == False:
+                        if self.DEBUG:
+                            print("set_radio_state: alse setting volume")
+                        time.sleep(1)
+                        self.set_audio_volume(self.persistent_data['volume'])
+                    
+                except Exception as ex:
+                    if self.DEBUG:
+                        print("Error starting audio player: " + str(ex))
+                        
+                
                 
      
             #
@@ -896,33 +902,39 @@ class InternetRadioAdapter(Adapter):
             else:
                 if self.DEBUG:
                     print("turning off radio")
-                self.persistent_data['playing'] = False
-                self.set_status_on_thing("Stopped")
-                self.get_artist() # sets now_playing data to none on the device and UI
-                if self.player != None:
-                    if self.DEBUG:
-                        print("player object existed")
-                    if self.respeaker_detected == False:
-                        self.player.stdin.write(b'q')
-                        self.player.stdin.flush()
-                    self.player.terminate()
-                    self.player.kill()
-                    #os.system('pkill ffplay')
-                    if self.respeaker_detected:
-                        os.system('pkill ffplay')
-                    else:
-                        os.system('pkill omxplayer')
-                    self.player = None
+                try:
+                    self.persistent_data['playing'] = False
+                    self.set_status_on_thing("Stopped")
+                    self.get_artist() # sets now_playing data to none on the device and UI
+                    if self.player != None:
+                        if self.DEBUG:
+                            print("player object existed")
+                        if self.respeaker_detected == False:
+                            self.player.stdin.write(b'q')
+                            self.player.stdin.flush()
+                        self.player.terminate()
+                        self.player.kill()
+                        #os.system('pkill ffplay')
+                        if self.respeaker_detected:
+                            os.system('pkill ffplay')
+                        else:
+                            os.system('pkill omxplayer')
+                        self.player = None
                 
-                else:
+                    else:
+                        if self.DEBUG:
+                            print("Could not stop the player because it wasn't running.")
+                except Exception as ex:
                     if self.DEBUG:
-                        print("Could not stop the player because it wasn't running.")
+                        print("Error stopping audio player: " + str(ex))
+                
                 
             # update the UI
             self.set_state_on_thing(bool(power))
 
         except Exception as ex:
-            print("Error setting radio state: " + str(ex))
+            if self.DEBUG:
+                print("Error setting radio state: " + str(ex))
 
 
 
@@ -961,8 +973,8 @@ class InternetRadioAdapter(Adapter):
                     environment["DBUS_SESSION_BUS_ADDRESS"] = str(omxplayerdbus_user).strip()
                     environment["DISPLAY"] = ":0"
                 
-                    if self.DEBUG:
-                        print("environment: " + str(environment))
+                    #if self.DEBUG:
+                    #    print("environment: " + str(environment))
                     
                     dbus_volume = volume / 100
                     if self.DEBUG:

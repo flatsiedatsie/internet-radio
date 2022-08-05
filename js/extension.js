@@ -348,84 +348,90 @@
                                         {'action':'poll'}
 
                     		        ).then((body) => {
-                                        if(this.debug){
-                                            console.log("internet radio poll: ", body);
-                                        }
                                         
-                                        // Playing
-                                        if(typeof body.playing != 'undefined'){
-                                            this.playing = body.playing;
-                                            if(body.playing){
-                                                document.body.classList.add('extension-internet-radio-playing');
+                                        try{
+                                            if(this.debug){
+                                                console.log("internet radio poll: ", body);
                                             }
-                                            else{
-                                                document.body.classList.remove('extension-internet-radio-playing');
-                                                if(now_playing_element != null){
-                                                    now_playing_element.innerText = '';
+                                        
+                                            // Playing
+                                            if(typeof body.playing != 'undefined'){
+                                                this.playing = body.playing;
+                                                if(body.playing){
+                                                    document.body.classList.add('extension-internet-radio-playing');
                                                 }
+                                                else{
+                                                    document.body.classList.remove('extension-internet-radio-playing');
+                                                    if(now_playing_element != null){
+                                                        now_playing_element.innerText = '';
+                                                    }
                                                 
-                                            }
-                                            if(document.getElementById('extension-internet-radio-toggle-button') != null){
-                                                document.getElementById('extension-internet-radio-toggle-button').classList.remove('hidden');
-                                            }
+                                                }
+                                                if(document.getElementById('extension-internet-radio-toggle-button') != null){
+                                                    document.getElementById('extension-internet-radio-toggle-button').classList.remove('hidden');
+                                                }
                                             
-                                        }
+                                            }
                                         
                                         
-                                        // Volume
-                                        if(typeof body.volume != 'undefined'){
-                                            //this.previous_volume = body['volume'];
-                                            if(document.getElementById('extension-internet-radio-volume-indicator-line') != null){
-                                                document.getElementById('extension-internet-radio-volume-indicator-line').style.width = body['volume'] + "%";
-                                                //document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
-                                            }
-                                        }
-                        
-                                        // Now_playing
-                                        if(typeof body.now_playing == 'string'){
-                                            if(body.now_playing == "" || body.now_playing == null){
-                                                //document.getElementById('extension-internet-radio-now-playing-container').classList.remove('extension-internet-radio-has-now-playing');
-                                            }
-                                            else if(now_playing_element != null){
-                                                if(body.now_playing.indexOf('Advert') !== -1){
-                                                    now_playing_element.innerText = 'Advertisement';
-                                                }else{
-                                                    now_playing_element.innerText = body.now_playing;
+                                            // Volume
+                                            if(typeof body.volume != 'undefined'){
+                                                //this.previous_volume = body['volume'];
+                                                if(document.getElementById('extension-internet-radio-volume-indicator-line') != null){
+                                                    document.getElementById('extension-internet-radio-volume-indicator-line').style.width = body['volume'] + "%";
+                                                    //document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
                                                 }
-                                                //now_playing_element.style.width = (body.now_playing.length + 5) + 'ch';
-                                                //document.getElementById('extension-internet-radio-now-playing-container').classList.add('extension-internet-radio-has-now-playing');
                                             }
-                                        }
                         
-                                        // Station
-                                        if(typeof body.station != 'undefined'){
-                                            if(body.station != this.station && !this.searching){
-                                                //console.log("station was changed elsewhere");
-                                                // We're on the stations page, and the station was changed somewhere else
-                                                this.get_init_data();
+                                            // Now_playing
+                                            if(typeof body.now_playing == 'string'){
+                                                if(body.now_playing == "" || body.now_playing == null){
+                                                    //document.getElementById('extension-internet-radio-now-playing-container').classList.remove('extension-internet-radio-has-now-playing');
+                                                }
+                                                else if(now_playing_element != null){
+                                                    if(body.now_playing.indexOf('Advert') !== -1){
+                                                        now_playing_element.innerText = 'Advertisement';
+                                                    }else{
+                                                        now_playing_element.innerText = body.now_playing;
+                                                    }
+                                                    //now_playing_element.style.width = (body.now_playing.length + 5) + 'ch';
+                                                    //document.getElementById('extension-internet-radio-now-playing-container').classList.add('extension-internet-radio-has-now-playing');
+                                                }
                                             }
+                        
+                                            // Station
+                                            if(typeof body.station != 'undefined'){
+                                                if(body.station != this.station && !this.searching){
+                                                    //console.log("station was changed elsewhere");
+                                                    // We're on the stations page, and the station was changed somewhere else
+                                                    this.get_init_data();
+                                                }
                             
-                                            this.station = body.station;
-                                        }
-                                        
-                                        if(typeof body.volume != 'undefined'){
-                                            if(body['volume'] != this.previous_volume){
-                                                console.log("volume was changed elsewhere to: ", body['volume'] );
-                                                this.previous_volume = body['volume'];
-                                                //if(this.playing){
-                                                    //this.volume_indicator_countdown = 4;
-                                                    //if(document.getElementById('extension-internet-radio-volume-indicator-container') != null){
-                                                    //    document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
-                                                    //}
-                                                //}
-                                                
-                                                
+                                                this.station = body.station;
                                             }
+                                        
+                                            if(typeof body.volume != 'undefined'){
+                                                if(body['volume'] != this.previous_volume){
+                                                    console.log("volume was changed elsewhere to: ", body['volume'] );
+                                                    this.previous_volume = body['volume'];
+                                                    //if(this.playing){
+                                                        //this.volume_indicator_countdown = 4;
+                                                        //if(document.getElementById('extension-internet-radio-volume-indicator-container') != null){
+                                                        //    document.getElementById('extension-internet-radio-volume-indicator-container').classList.remove('extension-internet-radio-hidden');
+                                                        //}
+                                                    //}
+                                                
+                                                
+                                                }
+                                            }
+                                        }
+                                        catch(e){
+                                            console.log("Error in try/catch inside /poll request: ", e);
                                         }
                                         
                     
                     		        }).catch((e) => {
-                    		  			console.log("Error polling: ", e);
+                    		  			console.log("Error calling /poll: ", e);
                     		        });
                     
                                 }
