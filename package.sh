@@ -15,12 +15,15 @@ else
   TARFILE_SUFFIX="-${ADDON_ARCH}-v${PYTHON_VERSION}"
 fi
 
-
 # Prep new package
-mkdir package
+echo "creating package"
+mkdir -p lib package
+
+# Pull down Python dependencies
+pip3 install -r requirements.txt -t lib --no-binary :all: --prefix ""
 
 # Put package together
-cp -r pkg LICENSE manifest.json *.py css js images views README.md package/
+cp -r pkg lib LICENSE manifest.json *.py css js images views README.md package/
 find package -type f -name '*.pyc' -delete
 find package -type f -name '._*' -delete
 find package -type d -empty -delete
