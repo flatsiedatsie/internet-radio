@@ -887,7 +887,9 @@ class InternetRadioAdapter(Adapter):
                         print("turning on VLC")
                     # start playing video
                     self.vlc_player.play()
-                
+
+                    time.sleep(1)
+                    self.set_audio_volume(self.persistent_data['volume'])
                 
                 
                 # NOT VLC
