@@ -111,7 +111,7 @@ class InternetRadioAdapter(Adapter):
         self.previous_audio_output = None
         #self.vlc_current_output = 'default'
         self.vlc_devices = {}
-       
+        self.played_silence = False
         
         
         vlc_check_output = run_command('which vlc')
@@ -241,6 +241,8 @@ class InternetRadioAdapter(Adapter):
                 print("Error in handling missing persistent data file: " + str(ex))
                 self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output': "", 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
 
+
+        print("\nself.persistent_data: " + str(self.persistent_data))
 
         # LOAD CONFIG
 
@@ -877,19 +879,45 @@ class InternetRadioAdapter(Adapter):
                                 print("could not change VLC audio output, invalid value: " + str(self.persistent_data['audio_output']) )
                         
                     self.previous_audio_output = self.persistent_data['audio_output']
-                
-                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                    
+                    print("vola: " + str(self.vlc_player.audio_get_volume()))
+                        
+                    
                     self.vlc_media = vlc.Media( str(self.persistent_data['current_stream_url']) )
-                
+                    self.vlc_media.parse()
+                    
+                    print("vol: " + str(self.vlc_player.audio_get_volume()))
+                    
+                    
                     # setting media to the media player
                     self.vlc_player.set_media( self.vlc_media )
+                    #self.vlc_player.parse()
+                    
+                    
+                    
+                    print("vol3: " + str(self.vlc_player.audio_get_volume()))
+                    
                     if self.DEBUG:
                         print("turning on VLC")
                     # start playing video
                     self.vlc_player.play()
-
-                    time.sleep(1)
-                    self.set_audio_volume(self.persistent_data['volume'])
+                    #self.vlc_player.stop()
+                    
+                    print("")
+                    print("FOR!")
+                    for x in range(3000):
+                        
+                        self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                        time.sleep(0.001)
+                        if self.vlc_player.audio_get_volume() != -1:
+                            print("x: " + str(x))
+                            break
+                    
+                    print("")
+                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                    time.sleep(.1)
+                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                    
                 
                 
                 # NOT VLC
