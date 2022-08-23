@@ -106,24 +106,13 @@ class InternetRadioAdapter(Adapter):
         
         
         # VLC
-        self.previous_audio_output = None
-        self.vlc_current_output = 'default'
-
-        #self.vlc_default_device = 'default'
-        #self.vlc_headphone_device = None
-        #self.vlc_hdmi0_device = None
-        #self.vlc_hdmi1_device = None
-        #self.vlc_bluetooth_device = None
-        
-        self.vlc_devices = {}
-        
-        #self.vlc_output_device_ids = []
-        #self.vlc_ui_output_devices = [] # which names to show in the dropdown
-        
-        
-        self.vlc_bluetooth_output_index = None
-        self.vlc_player = None
         self.use_vlc = False
+        self.vlc_player = None
+        self.previous_audio_output = None
+        #self.vlc_current_output = 'default'
+        self.vlc_devices = {}
+       
+        
         
         vlc_check_output = run_command('which vlc')
         if '/vlc' in vlc_check_output:
@@ -133,17 +122,8 @@ class InternetRadioAdapter(Adapter):
         if self.use_vlc:
             print("VLC detected")
             self.vlc_player = vlc.MediaPlayer()
-            
-            
-            self.vlc_current_output = self.vlc_player.audio_output_device_get()
-            print("self.vlc_current_output: " + str(self.vlc_current_output))
-            print(".")
-            
-            print("VLC OUTPUT DEVICES:")
-            #print(str( self.vlc_player.audio_output_enumerate_devices() ))
-            
-            
-            
+            #self.vlc_current_output = self.vlc_player.audio_output_device_get()
+
             mods = self.vlc_player.audio_output_device_enum()
             if mods:
                 index = 0
@@ -155,49 +135,26 @@ class InternetRadioAdapter(Adapter):
                     
                     print(f'index = {index}, desc = {desc}, device = {dev}')
                     
-                    
-                    
                     if desc == 'Default':
-                        #self.vlc_default_device = dev
-                        #print("self.vlc_default_device: " + str(self.vlc_default_device))
-                        #self.vlc_ui_output_devices.append('Automatic')
                         self.vlc_devices['Automatic'] = dev
                         
                     elif 'eadphone' in desc and 'sysdefault' in dev:
-                        #self.vlc_headphone_device = dev
-                        #self.vlc_ui_output_devices.append('Headphone jack')
                         self.vlc_devices['Headphone jack'] = dev
                         
                     elif 'hdmi-0' in desc and 'sysdefault' in dev:
-                        #self.vlc_hdmi0_device = dev
-                        #print("self.vlc_hdmi0_device: " + str(self.vlc_hdmi0_device))
-                        #self.vlc_ui_output_devices.append('HDMI 1')
                         self.vlc_devices['HDMI 1'] = dev
                         
                     elif 'hdmi-1' in desc and 'sysdefault' in dev:
-                        #self.vlc_hdmi1_device = dev
-                        #print("self.vlc_hdmi1_device: " + str(self.vlc_hdmi1_device))
-                        #self.vlc_ui_output_devices.append('HDMI 2')
                         self.vlc_devices['HDMI 2'] = dev
                         
                     elif 'luetooth' in desc:
-                        #self.vlc_bluetooth_output_index = index
-                        #self.vlc_bluetooth_device = dev
-                        #print("self.vlc_bluetooth_device: " + str(self.vlc_bluetooth_device))
-                        #self.vlc_ui_output_devices.append('Bluetooth speaker')
                         self.vlc_devices['Bluetooth speaker'] = dev
-                        
-                        
-                    #self.vlc_output_device_ids.append(dev)
 
                     mod = mod.next
                     index += 1
                 
                 #print("self.vlc_output_device_ids: " + str(self.vlc_output_device_ids))
                 print("VLC audio output devices: " + str(self.vlc_devices))
-            
-            #self.vlc_player.audio_output_device_set(None, 'bluealsa')
-            
             
             
         else:
@@ -1172,7 +1129,8 @@ class InternetRadioAdapter(Adapter):
              
             if self.respeaker_detected:
                 set_volume_via_radio_state = True # changes volume by completely restarting the player and giving it the new initial volume value
-                print("set_audio_volume: set_volume_via_radio_state is true")
+                if self.DEBUG:
+                    print("set_audio_volume: set_volume_via_radio_state is true")
             
         
                 
@@ -1253,7 +1211,8 @@ class InternetRadioAdapter(Adapter):
                     self.set_radio_state(self.persistent_data['power'],False)
                     
             except Exception as ex:
-                print("Error trying to set volume via dbus: " + str(ex))
+                if self.DEBUG:
+                    print("Error trying to set volume via dbus: " + str(ex))
                 set_volume_via_radio_state= True
             
         self.set_volume_on_thing(volume)
@@ -1357,7 +1316,9 @@ class InternetRadioAdapter(Adapter):
             if str(selection) in self.vlc_devices.keys():  #self.vlc_ui_output_devices:
                 self.persistent_data['audio_output'] = str(selection)
             else:
-                self.persistent_data['audio_output'] = self.vlc_devices.keys()[0]
+                if self.DEBUG:
+                    print("invalid audio output selection")
+                self.persistent_data['audio_output'] = list(self.vlc_devices.keys())[0]
                 
             if self.devices['internet-radio'] != None:
                 self.devices['internet-radio'].properties['audio output'].update( str(selection) )
@@ -1367,8 +1328,6 @@ class InternetRadioAdapter(Adapter):
                 if self.DEBUG:
                     print("restarting radio with new audio output")
                 self.set_radio_state(True)
-            
-            
             
             
             
@@ -1624,9 +1583,11 @@ class InternetRadioDevice(Device):
                             if self.DEBUG:
                                 print("Had to set alternative audio output for property: " + str(selected_output))
                         else:
-                            print("ok, selected output was in vlc list")
+                            if self.DEBUG:
+                                print("ok, selected output was in vlc list")
                 except Exception as ex:
-                    print("generate vlc audio output list error: " + str(ex))
+                    if self.DEBUG:
+                        print("generate vlc audio output list error: " + str(ex))
                 
                 self.properties["audio output"] = InternetRadioProperty(
                                 self,
