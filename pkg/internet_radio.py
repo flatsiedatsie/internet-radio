@@ -348,25 +348,37 @@ class InternetRadioAdapter(Adapter):
         
             if self.persistent_data['playing'] == True:
                 #if self.DEBUG:
-                #    print(str(self.adapter.poll_counter))
+                #print(">" + str(self.poll_counter))
+                #print(str(self.poll_counter % 5))
                 
                 # done this way to immediately call get_artist when the player starts
                 if self.poll_counter == 0:
                     if self.get_song_details:
                         self.now_playing = self.get_artist()
                 
-                    # If the users wants a Bluetooth speaker to be connected, but it's not, then keep trying to switch to it.
+                # If the users wants a Bluetooth speaker to be connected, but it's not, then keep trying to switch to it.
+                if self.poll_counter % 5 == 0:
+                    if self.DEBUG:
+                        print("5 secs")
                     if self.use_vlc and 'Bluetooth speaker' in self.vlc_devices:
-                        if self.persistent_data['audio_output'] == 'Bluetooth speaker' and self.actual_audio_output_device != str(self.vlc_devices['Bluetooth speaker']):
-                            if self.bluetooth_device_check():
-                                if self.DEBUG:
-                                    print("Reconnecting to Bluetooth speaker")
-                                self.set_radio_state(self.persistent_data['power'],False)
-                            else:
-                                if self.DEBUG:
-                                    
-                                    print('........still looking for Bluetooth speaker........')
+                        if self.persistent_data['audio_output'] == 'Bluetooth speaker':
+                            
+                            bt_connected = self.bluetooth_device_check()
+                            
+                            if self.actual_audio_output_device != str(self.vlc_devices['Bluetooth speaker']):
+                                if bt_connected:
+                                    if self.DEBUG:
+                                        print("Reconnecting to Bluetooth speaker")
+                                        self.set_radio_state(self.persistent_data['power'],False)
+                                else:
+                                    if self.DEBUG:
+                                        print('........still looking for Bluetooth speaker........')
                         
+                            elif self.actual_audio_output_device == str(self.vlc_devices['Bluetooth speaker']) and bt_connected == False:
+                                if self.DEBUG:
+                                    print("........Lost connection to the Bluetooth speaker........")
+                                # Lost connection to the bluetooth speaker
+                                self.set_radio_state(self.persistent_data['power'],False)
                     
                 
                 #if self.adapter.playing:
@@ -784,7 +796,7 @@ class InternetRadioAdapter(Adapter):
                 
                 if self.use_vlc:
                     
-                    if self.persistent_data['audio_output'] != self.previous_intended_audio_output:
+                    if self.persistent_data['audio_output'] != self.previous_intended_audio_output or self.persistent_data['audio_output'] != self.actual_audio_output_device:
                         #self.vlc_player.stop()
                         
                         if str(self.persistent_data['audio_output']) in self.vlc_devices:
@@ -799,6 +811,8 @@ class InternetRadioAdapter(Adapter):
                             # Check if the Bluetooth speaker should be selected or de-selected
                             bluetooth_speaker_connected = False
                             if str(self.persistent_data['audio_output']) == 'Bluetooth speaker' or str(self.persistent_data['audio_output']) == 'Automatic':
+                                if self.DEBUG:
+                                    print('Audio output is intended to be Bluetooth or Automatic, so doing bluetooth check.')
                                 bluetooth_speaker_connected = self.bluetooth_device_check()
                             
                             if self.DEBUG:
@@ -812,7 +826,7 @@ class InternetRadioAdapter(Adapter):
                                 
                                 if 'Automatic' in self.vlc_devices:
                                     if self.DEBUG:
-                                        print("switching to 'default' audio output instead (a.k.a. Automatic)")
+                                        print("falling back to 'default' audio output instead (a.k.a. Automatic)")
                                     self.actual_audio_output_device = self.vlc_devices['Automatic']
                                 else:
                                     if self.DEBUG:
@@ -875,7 +889,7 @@ class InternetRadioAdapter(Adapter):
                     #print("volq2: " + str(self.vlc_player.audio_get_volume()))
                     time.sleep(.07)
                     self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                    self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
+                    #self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
                     #print("volc nu echt toch wel: " + str(self.vlc_player.audio_get_volume()))
                     time.sleep(1)
                     self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
