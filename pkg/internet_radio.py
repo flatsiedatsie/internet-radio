@@ -87,7 +87,6 @@ class InternetRadioAdapter(Adapter):
         self.bluetooth_persistence_file_path = os.path.join(self.user_profile['dataDir'], 'bluetoothpairing', 'persistence.json')
 
         self.running = True
-        self.clock_active = False
         self.last_connection_fail_time = 0
         self.poll_counter = 0 # once every 20 UI polls we find out the 'now playing'data. If a play button on the UI is pressed, this counter is also reset.
         self.show_buttons_everywhere = False
@@ -100,19 +99,17 @@ class InternetRadioAdapter(Adapter):
         self.get_song_details = True
         self.output_to_both = False
         
-        self.clock_active = True  # TODO used to circumvent the clock thread for now, as an experiment
-        
         self.respeaker_detected = False
         
         
         # VLC
         self.use_vlc = False
         self.vlc_player = None
-        self.previous_audio_output = None
+        self.previous_intended_audio_output = None
         #self.vlc_current_output = 'default'
         self.vlc_devices = {}
         self.played_silence = False
-        
+        self.actual_audio_output_device = None
         
         vlc_check_output = run_command('which vlc')
         if '/vlc' in vlc_check_output:
@@ -345,6 +342,7 @@ class InternetRadioAdapter(Adapter):
 
         defunct_count = 0
         
+        # Clock alternative
         while self.running: # and self.player != None
             time.sleep(1)
         
@@ -357,31 +355,26 @@ class InternetRadioAdapter(Adapter):
                     if self.get_song_details:
                         self.now_playing = self.get_artist()
                 
+                    # If the users wants a Bluetooth speaker to be connected, but it's not, then keep trying to switch to it.
+                    if self.use_vlc and 'Bluetooth speaker' in self.vlc_devices:
+                        if self.persistent_data['audio_output'] == 'Bluetooth speaker' and self.actual_audio_output_device != str(self.vlc_devices['Bluetooth speaker']):
+                            if self.bluetooth_device_check():
+                                if self.DEBUG:
+                                    print("Reconnecting to Bluetooth speaker")
+                                self.set_radio_state(self.persistent_data['power'],False)
+                            else:
+                                if self.DEBUG:
+                                    
+                                    print('........still looking for Bluetooth speaker........')
+                        
+                    
+                
                 #if self.adapter.playing:
                 self.poll_counter += 1
                 if self.poll_counter > 20:
                     self.poll_counter = 0
                 
-                # Every 3 seconds check if the music player hasn't crashed. If this seems the case twice in a row, restart the player
-                if self.poll_counter % 3 == 0:
-                    defunct_check = run_command("ps aux | grep 'omxplayer'")
-        
-                    if "[omxplayer] <defunct>" in defunct_check:
-                        if self.DEBUG:
-                            print("omx player may have crashed, spotted 'defunct'")
-        
-                        defunct_count += 1
-            
-                        if defunct_count > 1:
-                            if self.DEBUG:
-                                print("spotted 'defunct' twice in a row. Restarting crashed omx player")
-                            defunct_count = -5
-                            self.set_radio_state(True)
-                    else:
-                        defunct_count = 0
-                
-            else:
-                defunct_count = 0
+          
 
         
             
@@ -456,23 +449,33 @@ class InternetRadioAdapter(Adapter):
 
 
         
-
-
-
     def bluetooth_device_check(self):
+        #sudo bluetoothctl info # this would be a more universal option perhaps
+        bluealsa_check = run_command('bluealsa-aplay -L')
+        if 'bluealsa:' in bluealsa_check:
+            if self.DEBUG:
+                print("Connected Bluetooth speaker detected")
+            return True
+        else:
+            if self.DEBUG:
+                print("No Bluetooth speaker")
+            return False
+
+
+    def bluetooth_device_check_old(self):
         if self.DEBUG:
             print("checking if bluetooth speaker is connected")
         
         try:
             
-            aplay_pcm_check = run_command('aplay -L')
+            aplay_pcm_check = run_command('aplay -L | grep lue')
             if self.DEBUG:
                 print("aplay_pcm_check: " + str(aplay_pcm_check))
                 
             if 'bluealsa' in aplay_pcm_check:
                 self.bluealsa = True
                 if self.DEBUG:
-                    print("BlueAlsa was detected as PCM option")
+                    print("bluetooth_device_check: BlueAlsa was detected as PCM option")
                     
                 if self.persistent_data['bluetooth_device_mac'] != None:
                     bluetooth_check = run_command('sudo bluetoothctl info ' + self.persistent_data['bluetooth_device_mac'])
@@ -498,10 +501,14 @@ class InternetRadioAdapter(Adapter):
                                         self.save_persistent_data()
                                         if not "Bluetooth speaker" in self.audio_output_options:
                                             self.audio_output_options.append( "Bluetooth speaker" )
+                                            
+                                            
+                                        if self.DEBUG:
+                                            print("A Bluetooth speaker is connected")
                                         return True
                         else:
                             if self.DEBUG:
-                                print("No connected devices found in persistent data from bluetooth pairing addon")
+                                print("No connected devices found in persistent data from bluetooth pairing addon: " + print(self.bluetooth_persistent_data['connected']))
                 
             else:
                 if self.DEBUG:
@@ -757,8 +764,8 @@ class InternetRadioAdapter(Adapter):
                 if self.DEBUG:
                     print("radio state changed from value in persistence.")
                 self.persistent_data['power'] = bool(power)
-                if self.DEBUG:
-                    print("self.persistent_data['power'] = power? " + str(self.persistent_data['power']) + " =?= " + str(power))
+                #if self.DEBUG:
+                #    print("self.persistent_data['power'] = power? " + str(self.persistent_data['power']) + " =?= " + str(power))
                 self.save_persistent_data()
             else:
                 if self.DEBUG:
@@ -774,128 +781,78 @@ class InternetRadioAdapter(Adapter):
             #
             if power:
                 
-                environment = os.environ.copy()
-                
-                # Checking audio output option
-                
-                bt_connected = False
-                
-                try:
-                    if self.DEBUG:
-                        print("self.persistent_data['audio_output']: " + str(self.persistent_data['audio_output']))
-                    
-                    
-                    # Check if a bluetooth speaker is connected
-                    if self.persistent_data['audio_output'] == 'Bluetooth speaker':
-                        if self.DEBUG:
-                            print("Doing bluetooth speaker connection check")
-                        
-                        
-                        bluetooth_connection_check_output = run_command('amixer -D bluealsa scontents')
-                        if len(bluetooth_connection_check_output) > 10:
-                            bt_connected = True
-                    
-                        # Find out if another speaker was paired/connected through the Bluetooth Pairing addon
-                        else:
-                            if self.DEBUG:
-                                print("Bluetooth device mac was None. Doing bluetooth_device_check")
-                            if self.bluetooth_device_check():
-                                if self.persistent_data['bluetooth_device_mac'] != None:
-                                    bt_connected = True
-                            else:
-                                self.send_pairing_prompt("Please (re)connect a Bluetooth speaker using the Bluetooth pairing addon")
-                                if self.DEBUG:
-                                    print("bluetooth_device_check: no connected speakers?")
-                    
-                        if bt_connected:
-                            if self.DEBUG:
-                                print("Bluetooth speaker seems to be connected")
-                            #environment["SDL_AUDIODRIVER"] = "alsa"
-                            #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
-                            
-                            
-                            
-                    elif sys.platform != 'darwin':
-                            for option in self.audio_controls:
-                                if self.DEBUG:
-                                    print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
-                                if option['human_device_name'] == str(self.persistent_data['audio_output']):
-                                    if self.DEBUG:
-                                        print("setting ALSA_CARD environment variable to: " + str(option['simple_card_name']))
-                                    environment["ALSA_CARD"] = str(option['simple_card_name'])
-                                    
-                                    
-                    # TODO: provide the option to fall back to normal speakers if the bluetooth speaker is disconnected?
-                                    
-                except Exception as ex:
-                    print("Error in set_radio_state while doing audio output (bluetooth speaker) checking: " + str(ex))
-                
-                
-                
-                
                 
                 if self.use_vlc:
                     
-                    if self.persistent_data['audio_output'] != self.previous_audio_output:
-                        self.vlc_player.stop()
+                    if self.persistent_data['audio_output'] != self.previous_intended_audio_output:
+                        #self.vlc_player.stop()
                         
                         if str(self.persistent_data['audio_output']) in self.vlc_devices:
+                            if self.DEBUG:
+                                print("checking for optimal output device")
                             
                             # Initial audio output
-                            new_audio_output_device = self.vlc_devices[str(self.persistent_data['audio_output'])]
+                            self.actual_audio_output_device = self.vlc_devices[str(self.persistent_data['audio_output'])]
                             if self.DEBUG:
-                                print("Initial new audio output: " + str(new_audio_output_device))
+                                print("Initial intended audio output: " + str(self.actual_audio_output_device))
                             
                             # Check if the Bluetooth speaker should be selected or de-selected
                             bluetooth_speaker_connected = False
                             if str(self.persistent_data['audio_output']) == 'Bluetooth speaker' or str(self.persistent_data['audio_output']) == 'Automatic':
                                 bluetooth_speaker_connected = self.bluetooth_device_check()
                             
+                            if self.DEBUG:
+                                print("Bluetooth speaker connected? " + str(bluetooth_speaker_connected))
+                            
                             # Bluetooth speaker selected, but it's not connected
                             if str(self.persistent_data['audio_output']) == 'Bluetooth speaker' and bluetooth_speaker_connected == False:
                                 self.send_pairing_prompt("Please (re)connect a Bluetooth speaker using the Bluetooth pairing addon")
                                 if self.DEBUG:
-                                    print("bluetooth_device_check: no connected speakers?")
+                                    print("bluetooth_device_check: Bluetooth output selected but no connected speaker detected")
                                 
                                 if 'Automatic' in self.vlc_devices:
-                                    new_audio_output_device = self.vlc_devices['Automatic']
+                                    if self.DEBUG:
+                                        print("switching to 'default' audio output instead (a.k.a. Automatic)")
+                                    self.actual_audio_output_device = self.vlc_devices['Automatic']
                                 else:
                                     if self.DEBUG:
                                         print("No Bluetooth speaker connected, and could not fall back to Default either")
                                     return
                             
-                            # Automatic, and a Bluetooth speaker is connected
+                            # is Automatic output selected, and a Bluetooth speaker is connected
                             elif str(self.persistent_data['audio_output']) == 'Automatic' and bluetooth_speaker_connected == True:
-                                new_audio_output_device = self.vlc_devices['Bluetooth speaker']
+                                self.actual_audio_output_device = self.vlc_devices['Bluetooth speaker']
                             
                             
                             # Set the new audio putput
                             if self.DEBUG:
-                                print("Switching VLC to new audio output: " + str(new_audio_output_device))
-                            self.vlc_player.audio_output_device_set(None, new_audio_output_device)
+                                print("")
+                                print("self.actual_audio_output_device: " + str(self.actual_audio_output_device))
+                            #self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
+                            #self.vlc_player.pause()
+                            print("audio_output_device_get(): " + str(self.vlc_player.audio_output_device_get()))
                             
                         else:
                             if self.DEBUG:
                                 print("could not change VLC audio output, invalid value: " + str(self.persistent_data['audio_output']) )
                         
-                    self.previous_audio_output = self.persistent_data['audio_output']
+                    self.previous_intended_audio_output = self.persistent_data['audio_output']
                     
-                    print("vola: " + str(self.vlc_player.audio_get_volume()))
+                    #print("vola: " + str(self.vlc_player.audio_get_volume()))
                         
                     
                     self.vlc_media = vlc.Media( str(self.persistent_data['current_stream_url']) )
-                    self.vlc_media.parse()
                     
-                    print("vol: " + str(self.vlc_player.audio_get_volume()))
+                    #print("vol: " + str(self.vlc_player.audio_get_volume()))
+                    
+                    
                     
                     
                     # setting media to the media player
                     self.vlc_player.set_media( self.vlc_media )
                     #self.vlc_player.parse()
                     
-                    
-                    
-                    print("vol3: " + str(self.vlc_player.audio_get_volume()))
+                    #print("vol3: " + str(self.vlc_player.audio_get_volume()))
                     
                     if self.DEBUG:
                         print("turning on VLC")
@@ -903,26 +860,99 @@ class InternetRadioAdapter(Adapter):
                     self.vlc_player.play()
                     #self.vlc_player.stop()
                     
-                    print("")
-                    print("FOR!")
-                    for x in range(3000):
+                    for x in range(15000):
                         
                         self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
                         time.sleep(0.001)
-                        if self.vlc_player.audio_get_volume() != -1:
-                            print("x: " + str(x))
+                        volume = self.vlc_player.audio_get_volume()
+                        if volume != -1:
+                            print("x: " + str(x) + ' volume: ' + str(volume))
                             break
                     
-                    print("")
+                    time.sleep(.03)
+                    #print("volq: " + str(self.vlc_player.audio_get_volume()))
                     self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                    time.sleep(.1)
+                    #print("volq2: " + str(self.vlc_player.audio_get_volume()))
+                    time.sleep(.07)
                     self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                    self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
+                    #print("volc nu echt toch wel: " + str(self.vlc_player.audio_get_volume()))
+                    time.sleep(1)
+                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                    #print("volx: " + str(self.vlc_player.audio_get_volume()))
+                    time.sleep(1)
+                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                    #print("volx: " + str(self.vlc_player.audio_get_volume()))
+                    time.sleep(1)
+                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                    #print("volx3: " + str(self.vlc_player.audio_get_volume()))
+                    self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
                     
-                
+                    
+                    if self.DEBUG:
+                        print("audio_output_device_get(): " + str(self.vlc_player.audio_output_device_get()))
+                    
                 
                 # NOT VLC
                 else:
                     
+                    environment = os.environ.copy()
+                
+                    # Checking audio output option
+                
+                    bt_connected = False
+                
+                    try:
+                        if self.DEBUG:
+                            print("self.persistent_data['audio_output']: " + str(self.persistent_data['audio_output']))
+                    
+                    
+                        # Check if a bluetooth speaker is connected
+                        if self.persistent_data['audio_output'] == 'Bluetooth speaker':
+                            if self.DEBUG:
+                                print("Doing bluetooth speaker connection check")
+                        
+                        
+                            bluetooth_connection_check_output = run_command('amixer -D bluealsa scontents')
+                            if len(bluetooth_connection_check_output) > 10:
+                                bt_connected = True
+                    
+                            # Find out if another speaker was paired/connected through the Bluetooth Pairing addon
+                            else:
+                                if self.DEBUG:
+                                    print("Bluetooth device mac was None. Doing bluetooth_device_check")
+                                if self.bluetooth_device_check():
+                                    #if self.persistent_data['bluetooth_device_mac'] != None:
+                                    bt_connected = True
+                                else:
+                                    self.send_pairing_prompt("Please (re)connect a Bluetooth speaker using the Bluetooth pairing addon")
+                                    if self.DEBUG:
+                                        print("bluetooth_device_check: no connected speakers?")
+                    
+                            if bt_connected:
+                                if self.DEBUG:
+                                    print("Bluetooth speaker seems to be connected")
+                                #environment["SDL_AUDIODRIVER"] = "alsa"
+                                #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
+                            
+                            
+                            
+                        elif sys.platform != 'darwin':
+                                for option in self.audio_controls:
+                                    if self.DEBUG:
+                                        print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
+                                    if option['human_device_name'] == str(self.persistent_data['audio_output']):
+                                        if self.DEBUG:
+                                            print("setting ALSA_CARD environment variable to: " + str(option['simple_card_name']))
+                                        environment["ALSA_CARD"] = str(option['simple_card_name'])
+                                    
+                                    
+                        # TODO: provide the option to fall back to normal speakers if the bluetooth speaker is disconnected?
+                                    
+                    except Exception as ex:
+                        if self.DEBUG:
+                            print("Error in set_radio_state while doing audio output (bluetooth speaker) checking: " + str(ex))
+                
                     
                     
                     
