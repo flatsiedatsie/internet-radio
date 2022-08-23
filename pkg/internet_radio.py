@@ -141,11 +141,11 @@ class InternetRadioAdapter(Adapter):
                     elif 'eadphone' in desc and 'sysdefault' in dev:
                         self.vlc_devices['Headphone jack'] = dev
                         
-                    elif 'hdmi-0' in desc and 'sysdefault' in dev:
-                        self.vlc_devices['HDMI 1'] = dev
+                    elif ('hdmi-0' in desc or 'HDMI 0' in desc or 'HDMI0' in desc) and 'sysdefault' in dev:
+                        self.vlc_devices['HDMI 0'] = dev
                         
-                    elif 'hdmi-1' in desc and 'sysdefault' in dev:
-                        self.vlc_devices['HDMI 2'] = dev
+                    elif ('hdmi-1' in desc or 'HDMI 1' in desc or 'HDMI1' in desc) and 'sysdefault' in dev:
+                        self.vlc_devices['HDMI 1'] = dev
                         
                     elif 'luetooth' in desc:
                         self.vlc_devices['Bluetooth speaker'] = dev
