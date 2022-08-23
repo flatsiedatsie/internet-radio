@@ -156,7 +156,7 @@ class InternetRadioAPIHandler(APIHandler):
                             if self.DEBUG:
                                 print("new volume: " + str(volume))
                             
-                            if self.adapter.player != None:
+                            if self.adapter.player != None or self.adapter.vlc_player != None:
                                 if self.DEBUG:
                                     print("-")
                                 self.adapter.set_audio_volume(volume)
@@ -190,7 +190,7 @@ class InternetRadioAPIHandler(APIHandler):
                             if self.DEBUG:
                                 print("new volume: " + str(volume))
                                 
-                            if self.adapter.player != None:
+                            if self.adapter.player != None or self.adapter.vlc_player != None:
                                 if self.DEBUG:
                                     print("+")
                                 self.adapter.set_audio_volume(volume)

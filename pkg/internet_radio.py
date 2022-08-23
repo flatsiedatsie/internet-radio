@@ -1,19 +1,27 @@
-"""Internet radio adapter for WebThings Gateway."""
+"""Internet radio adapter for Candle Controller / WebThings Gateway."""
 
 # test commands to play radio: 
 # ffplay -nodisp -vn -infbuf -autoexit http://direct.fipradio.fr/live/fip-midfi.mp3 -volume 100
 # SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=00:00:00:00:00:00 ffplay -nodisp -vn -infbuf -autoexit http://direct.fipradio.fr/live/fip-midfi.mp3 -volume 100
 
-# omxplayer -o local --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5 http://live.dancemusic.ro:7000/stream
-# omxplayer -o alsa:bluealsa http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
-# omxplayer -o alsa:sysdefault http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
+# omxplayer -o local --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5 http://direct.fipradio.fr/live/fip-midfi.mp3
+# omxplayer -o alsa:bluealsa http://direct.fipradio.fr/live/fip-midfi.mp3 --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
+# omxplayer -o alsa:sysdefault http://direct.fipradio.fr/live/fip-midfi.mp3 --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
+
+# omxplayer -o both http://direct.fipradio.fr/live/fip-midfi.mp3 --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
 
 # LD_LIBRARY_PATH=/opt/vc/lib omxplayer -o alsa:sysdefault http://live.dancemusic.ro:7000/stream --vol -2000 -z --audio_queue 10 --audio_fifo 10 --threshold 5
+
+
 
 import os
 import re
 import sys
+
+import vlc
+
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib'))
+
 import json
 import math
 import time
@@ -95,6 +103,106 @@ class InternetRadioAdapter(Adapter):
         self.clock_active = True  # TODO used to circumvent the clock thread for now, as an experiment
         
         self.respeaker_detected = False
+        
+        
+        # VLC
+        self.previous_audio_output = None
+        self.vlc_current_output = 'default'
+
+        #self.vlc_default_device = 'default'
+        #self.vlc_headphone_device = None
+        #self.vlc_hdmi0_device = None
+        #self.vlc_hdmi1_device = None
+        #self.vlc_bluetooth_device = None
+        
+        self.vlc_devices = {}
+        
+        #self.vlc_output_device_ids = []
+        #self.vlc_ui_output_devices = [] # which names to show in the dropdown
+        
+        
+        self.vlc_bluetooth_output_index = None
+        self.vlc_player = None
+        self.use_vlc = False
+        
+        vlc_check_output = run_command('which vlc')
+        if '/vlc' in vlc_check_output:
+            self.use_vlc = True
+            
+            
+        if self.use_vlc:
+            print("VLC detected")
+            self.vlc_player = vlc.MediaPlayer()
+            
+            
+            self.vlc_current_output = self.vlc_player.audio_output_device_get()
+            print("self.vlc_current_output: " + str(self.vlc_current_output))
+            print(".")
+            
+            print("VLC OUTPUT DEVICES:")
+            #print(str( self.vlc_player.audio_output_enumerate_devices() ))
+            
+            
+            
+            mods = self.vlc_player.audio_output_device_enum()
+            if mods:
+                index = 0
+                mod = mods
+                while mod:
+                    mod = mod.contents
+                    desc = mod.description.decode('utf-8', 'ignore')
+                    dev = mod.device.decode('utf-8', 'ignore')
+                    
+                    print(f'index = {index}, desc = {desc}, device = {dev}')
+                    
+                    
+                    
+                    if desc == 'Default':
+                        #self.vlc_default_device = dev
+                        #print("self.vlc_default_device: " + str(self.vlc_default_device))
+                        #self.vlc_ui_output_devices.append('Automatic')
+                        self.vlc_devices['Automatic'] = dev
+                        
+                    elif 'eadphone' in desc and 'sysdefault' in dev:
+                        #self.vlc_headphone_device = dev
+                        #self.vlc_ui_output_devices.append('Headphone jack')
+                        self.vlc_devices['Headphone jack'] = dev
+                        
+                    elif 'hdmi-0' in desc and 'sysdefault' in dev:
+                        #self.vlc_hdmi0_device = dev
+                        #print("self.vlc_hdmi0_device: " + str(self.vlc_hdmi0_device))
+                        #self.vlc_ui_output_devices.append('HDMI 1')
+                        self.vlc_devices['HDMI 1'] = dev
+                        
+                    elif 'hdmi-1' in desc and 'sysdefault' in dev:
+                        #self.vlc_hdmi1_device = dev
+                        #print("self.vlc_hdmi1_device: " + str(self.vlc_hdmi1_device))
+                        #self.vlc_ui_output_devices.append('HDMI 2')
+                        self.vlc_devices['HDMI 2'] = dev
+                        
+                    elif 'luetooth' in desc:
+                        #self.vlc_bluetooth_output_index = index
+                        #self.vlc_bluetooth_device = dev
+                        #print("self.vlc_bluetooth_device: " + str(self.vlc_bluetooth_device))
+                        #self.vlc_ui_output_devices.append('Bluetooth speaker')
+                        self.vlc_devices['Bluetooth speaker'] = dev
+                        
+                        
+                    #self.vlc_output_device_ids.append(dev)
+
+                    mod = mod.next
+                    index += 1
+                
+                #print("self.vlc_output_device_ids: " + str(self.vlc_output_device_ids))
+                print("VLC audio output devices: " + str(self.vlc_devices))
+            
+            #self.vlc_player.audio_output_device_set(None, 'bluealsa')
+            
+            
+            
+        else:
+            print("VLC not detected")
+        
         
         # Bluetooth
         self.last_bt_connection_check_time = 0
@@ -220,8 +328,9 @@ class InternetRadioAdapter(Adapter):
             if self.DEBUG:
                 print("Bluetooth output device seems to be available (in theory)")
         
+        #if self.DEBUG:
         if self.DEBUG:
-            print("complete self.audio_output_options : " + str(self.audio_output_options))
+            print("complete legacy self.audio_output_options : " + str(self.audio_output_options))
         
         # Create the radio device
         try:
@@ -238,6 +347,10 @@ class InternetRadioAdapter(Adapter):
 
         self.player = None
 
+
+        # temporary change until VLC is implemented
+        if os.path.isfile('/boot/candle_original_version.txt'):
+            self.respeaker_detected = True
         # Restore volume
         #try:
         #    self.set_audio_volume(self.persistent_data['volume'])
@@ -704,35 +817,6 @@ class InternetRadioAdapter(Adapter):
                 
                 environment = os.environ.copy()
                 
-                if self.player != None:
-                    if self.DEBUG:
-                        print("set_radio_state: warning, the player already existed. Stopping it first.")
-                    try:
-                        if self.respeaker_detected == False:
-                            self.player.stdin.write(b'q')
-                        self.player.terminate()
-                        self.player = None
-                    except Exception as ex:
-                        print("error terminating omxplayer with Q command. Maybe it stopped by itself?: " + str(ex))
-                        print("player.poll(): " + str( self.player.poll() ))
-                        #self.player = None
-                
-                else:
-                    if self.DEBUG:
-                        print("self.player was still None")
-                         
-                #if self.respeaker_detected:
-                if self.DEBUG:
-                    print("pkill omxplayer")
-                os.system('pkill omxplayer')
-                    
-                
-                if self.DEBUG:
-                    print("pkill ffplay")
-                os.system('pkill ffplay')
-                
-                self.player = None
-                
                 # Checking audio output option
                 
                 bt_connected = False
@@ -741,6 +825,8 @@ class InternetRadioAdapter(Adapter):
                     if self.DEBUG:
                         print("self.persistent_data['audio_output']: " + str(self.persistent_data['audio_output']))
                     
+                    
+                    # Check if a bluetooth speaker is connected
                     if self.persistent_data['audio_output'] == 'Bluetooth speaker':
                         if self.DEBUG:
                             print("Doing bluetooth speaker connection check")
@@ -775,6 +861,8 @@ class InternetRadioAdapter(Adapter):
                                 if self.DEBUG:
                                     print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
                                 if option['human_device_name'] == str(self.persistent_data['audio_output']):
+                                    if self.DEBUG:
+                                        print("setting ALSA_CARD environment variable to: " + str(option['simple_card_name']))
                                     environment["ALSA_CARD"] = str(option['simple_card_name'])
                                     
                                     
@@ -784,117 +872,219 @@ class InternetRadioAdapter(Adapter):
                     print("Error in set_radio_state while doing audio output (bluetooth speaker) checking: " + str(ex))
                 
                 
-                #kill_process('ffplay')
+                
+                
+                
+                if self.use_vlc:
+                    
+                    if self.persistent_data['audio_output'] != self.previous_audio_output:
+                        self.vlc_player.stop()
+                        
+                        if str(self.persistent_data['audio_output']) in self.vlc_devices:
+                            
+                            # Initial audio output
+                            new_audio_output_device = self.vlc_devices[str(self.persistent_data['audio_output'])]
+                            if self.DEBUG:
+                                print("Initial new audio output: " + str(new_audio_output_device))
+                            
+                            # Check if the Bluetooth speaker should be selected or de-selected
+                            bluetooth_speaker_connected = False
+                            if str(self.persistent_data['audio_output']) == 'Bluetooth speaker' or str(self.persistent_data['audio_output']) == 'Automatic':
+                                bluetooth_speaker_connected = self.bluetooth_device_check()
+                            
+                            # Bluetooth speaker selected, but it's not connected
+                            if str(self.persistent_data['audio_output']) == 'Bluetooth speaker' and bluetooth_speaker_connected == False:
+                                self.send_pairing_prompt("Please (re)connect a Bluetooth speaker using the Bluetooth pairing addon")
+                                if self.DEBUG:
+                                    print("bluetooth_device_check: no connected speakers?")
+                                
+                                if 'Automatic' in self.vlc_devices:
+                                    new_audio_output_device = self.vlc_devices['Automatic']
+                                else:
+                                    if self.DEBUG:
+                                        print("No Bluetooth speaker connected, and could not fall back to Default either")
+                                    return
+                            
+                            # Automatic, and a Bluetooth speaker is connected
+                            elif str(self.persistent_data['audio_output']) == 'Automatic' and bluetooth_speaker_connected == True:
+                                new_audio_output_device = self.vlc_devices['Bluetooth speaker']
+                            
+                            
+                            # Set the new audio putput
+                            if self.DEBUG:
+                                print("Switching VLC to new audio output: " + str(new_audio_output_device))
+                            self.vlc_player.audio_output_device_set(None, new_audio_output_device)
+                            
+                        else:
+                            if self.DEBUG:
+                                print("could not change VLC audio output, invalid value: " + str(self.persistent_data['audio_output']) )
+                        
+                    self.previous_audio_output = self.persistent_data['audio_output']
+                
+                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                    self.vlc_media = vlc.Media( str(self.persistent_data['current_stream_url']) )
+                
+                    # setting media to the media player
+                    self.vlc_player.set_media( self.vlc_media )
+                    if self.DEBUG:
+                        print("turning on VLC")
+                    # start playing video
+                    self.vlc_player.play()
+                
+                
+                
+                # NOT VLC
+                else:
+                    
+                    
+                    
+                    
+                    if self.player != None:
+                        if self.DEBUG:
+                            print("set_radio_state: warning, the player already existed. Stopping it first.")
+                        try:
+                            if self.respeaker_detected == False:
+                                self.player.stdin.write(b'q')
+                            self.player.terminate()
+                            self.player = None
+                        except Exception as ex:
+                            print("error terminating omxplayer with Q command. Maybe it stopped by itself?: " + str(ex))
+                            print("player.poll(): " + str( self.player.poll() ))
+                            #self.player = None
+                
+                    else:
+                        if self.DEBUG:
+                            print("self.player was still None")
+                         
+                    #if self.respeaker_detected:
+                    if self.DEBUG:
+                        print("pkill omxplayer")
+                    os.system('pkill omxplayer')
+                    
+                
+                    if self.DEBUG:
+                        print("pkill ffplay")
+                    os.system('pkill ffplay')
+                
+                    self.player = None
+                    
+                    
+                    
+                    #kill_process('ffplay')
                 
 				
-                logarithmic_volume = -6000 # start at 0
+                    logarithmic_volume = -6000 # start at 0
 				
-                # set the volume by starting omx-player with that volume
-                # Somehow this volume doesn't match the volume from the set_audio_volume method, so it's a fall-back option.
-                if also_call_volume == False and self.respeaker_detected == False:
+                    # set the volume by starting omx-player with that volume
+                    # Somehow this volume doesn't match the volume from the set_audio_volume method, so it's a fall-back option.
+                    if also_call_volume == False and self.respeaker_detected == False:
                     
-                    if self.persistent_data['volume'] > 0:
-                    	#print("volume is now 1")
-                        pre_volume = int(self.persistent_data['volume']) / 100
-    					#print("pre_volume: " + str(pre_volume))
-    					# OMXPlayer volume is between -6000 and 0 (logarithmic)
-                        logarithmic_volume = 2000 * math.log(pre_volume)
-    					#print("logarithmic_volume: " + str(logarithmic_volume))
+                        if self.persistent_data['volume'] > 0:
+                        	#print("volume is now 1")
+                            pre_volume = int(self.persistent_data['volume']) / 100
+        					#print("pre_volume: " + str(pre_volume))
+        					# OMXPlayer volume is between -6000 and 0 (logarithmic)
+                            logarithmic_volume = 2000 * math.log(pre_volume)
+        					#print("logarithmic_volume: " + str(logarithmic_volume))
                 
                
                 
-                try:
-                    if self.respeaker_detected:
+                    try:
+                        if self.respeaker_detected:
                     
-                        if bt_connected:
+                            if bt_connected:
                     
-                            environment["SDL_AUDIODRIVER"] = "alsa"
-                            #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
-                            environment["AUDIODEV"] = "bluealsa:00:00:00:00:00:00"
+                                environment["SDL_AUDIODRIVER"] = "alsa"
+                                #environment["AUDIODEV"] = "bluealsa:" + str(self.persistent_data['bluetooth_device_mac'])
+                                environment["AUDIODEV"] = "bluealsa:00:00:00:00:00:00"
                     
-                            #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.persistent_data['bluetooth_device_mac']) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
-                            my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
+                                #my_command = "SDL_AUDIODRIVER=alsa UDIODEV=bluealsa:DEV=" + str(self.persistent_data['bluetooth_device_mac']) + " ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
+                                my_command = "ffplay -nodisp -vn -infbuf -autoexit -volume " + str(self.persistent_data['volume']) + " " + str(self.persistent_data['current_stream_url'])
                     
                     
-                            if self.DEBUG:
-                                print("Internet radio addon will call this subprocess command: " + str(my_command))
-                                print("starting ffplay...")
-                            self.player = subprocess.Popen(my_command, 
-                                            env=environment,
-                                            shell=True,
-                                            stdin=subprocess.PIPE,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
+                                if self.DEBUG:
+                                    print("Internet radio addon will call this subprocess command: " + str(my_command))
+                                    print("starting ffplay...")
+                                self.player = subprocess.Popen(my_command, 
+                                                env=environment,
+                                                shell=True,
+                                                stdin=subprocess.PIPE,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE)
                 
                 
-                        else:
-                            #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
-                            my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit","-volume",str(self.persistent_data['volume']), str(self.persistent_data['current_stream_url']) )
+                            else:
+                                #my_command = "ffplay -nodisp -vn -infbuf -autoexit" + str(self.persistent_data['current_stream_url']) + " -volume " + str(self.persistent_data['volume'])
+                                my_command = ("ffplay", "-nodisp", "-vn", "-infbuf","-autoexit","-volume",str(self.persistent_data['volume']), str(self.persistent_data['current_stream_url']) )
 
+                                if self.DEBUG:
+                                    print("Internet radio addon will call this subprocess command: " + str(my_command))
+                                    print("starting ffplay...")
+                                self.player = subprocess.Popen(my_command, 
+                                                env=environment,
+                                                stdin=subprocess.PIPE,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE)
+                    
+                        else:
+                    
+                            #if self.persistent_data['audio_output'] == 'Built-in headphone jack':
+                            #    omx_output = "local"
+                            #else:
+                            #    omx_output = "hdmi"
+                    
+                        
+                    
+                            omx_output = "alsa:sysdefault"
+                
+                            if self.output_to_both:
+                                omx_output = "both"
+                
+                            if bt_connected:
+                                omx_output = "alsa:bluealsa"
+			
+                            omx_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
                             if self.DEBUG:
-                                print("Internet radio addon will call this subprocess command: " + str(my_command))
-                                print("starting ffplay...")
-                            self.player = subprocess.Popen(my_command, 
-                                            env=environment,
-                                            stdin=subprocess.PIPE,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
+                                print("\nOMX Player command: " + str(omx_command))
+                            #omxplayer -o alsa:bluealsa
+            
+                            command_array = omx_command.split(' ')
+            
+                            environment = os.environ.copy()
+                            environment["DISPLAY"] = ":0"
+                            environment["LD_LIBRARY_PATH"] = "/opt/vc/lib"
                     
-                    else:
-                    
-                        #if self.persistent_data['audio_output'] == 'Built-in headphone jack':
-                        #    omx_output = "local"
-                        #else:
-                        #    omx_output = "hdmi"
-                    
-                        omx_output = "alsa:sysdefault"
-                    
-                        if self.output_to_both:
-                            omx_output = "both"
-                    
-                        if bt_connected:
-                            omx_output = "alsa:bluealsa"
-				
-                        omx_command = "omxplayer -o " + str(omx_output) + " --vol " + str(logarithmic_volume) + " -z --audio_queue 10 --audio_fifo 10 --threshold 5 " + str(self.persistent_data['current_stream_url'])
-                        if self.DEBUG:
-                            print("\nOMX Player command: " + str(omx_command))
-                        #omxplayer -o alsa:bluealsa
-                
-                        command_array = omx_command.split(' ')
-                
-                        environment = os.environ.copy()
-                        environment["DISPLAY"] = ":0"
-                        environment["LD_LIBRARY_PATH"] = "/opt/vc/lib"
-                        
-                        self.player = subprocess.Popen(command_array, 
-                                            env=environment,
-                                            stdin=subprocess.PIPE,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE,
-                                            bufsize=0,
-                                            close_fds=True)
+                            self.player = subprocess.Popen(command_array, 
+                                                env=environment,
+                                                stdin=subprocess.PIPE,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE,
+                                                bufsize=0,
+                                                close_fds=True)
+                                                
                                         
-                        self.set_audio_volume(self.persistent_data['volume'])
+                            self.set_audio_volume(self.persistent_data['volume'])
                 
-                    if self.DEBUG:
-                        print("self.player created")
-                
-                    self.persistent_data['playing'] = True
-                    self.set_status_on_thing("Playing")
-                
-                
-                
-                    if also_call_volume and self.respeaker_detected == False:
-                        if self.DEBUG:
-                            print("set_radio_state: alse setting volume")
-                        time.sleep(1)
-                        self.set_audio_volume(self.persistent_data['volume'])
                     
-                except Exception as ex:
-                    if self.DEBUG:
-                        print("Error starting audio player: " + str(ex))
-                        
                 
+                        if self.DEBUG:
+                            print("self.player created")
+                    
+                
+                        if also_call_volume and self.respeaker_detected == False and self.use_vlc == False:
+                            if self.DEBUG:
+                                print("set_radio_state: alse setting volume")
+                            time.sleep(1)
+                            self.set_audio_volume(self.persistent_data['volume'])
+                    
+                    except Exception as ex:
+                        if self.DEBUG:
+                            print("Error starting audio player: " + str(ex))
+                        
+                        
+                        
+                self.persistent_data['playing'] = True
+                self.set_status_on_thing("Playing")
                 
      
             #
@@ -907,24 +1097,41 @@ class InternetRadioAdapter(Adapter):
                     self.persistent_data['playing'] = False
                     self.set_status_on_thing("Stopped")
                     self.get_artist() # sets now_playing data to none on the device and UI
-                    if self.player != None:
+                    
+                    
+                    if self.use_vlc:
+                    
+                        self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                        self.vlc_media = vlc.Media( str(self.persistent_data['current_stream_url']) )
+                    
+                        # setting media to the media player
+                        self.vlc_player.set_media( self.vlc_media )
+
                         if self.DEBUG:
-                            print("player object existed")
-                        if self.respeaker_detected == False:
-                            self.player.stdin.write(b'q')
-                            self.player.stdin.flush()
-                        self.player.terminate()
-                        self.player.kill()
-                        #os.system('pkill ffplay')
-                        if self.respeaker_detected:
-                            os.system('pkill ffplay')
-                        else:
-                            os.system('pkill omxplayer')
-                        self.player = None
-                
+                            print("turning off VLC")
+                        # start playing video
+                        self.vlc_player.stop()
+                    
                     else:
-                        if self.DEBUG:
-                            print("Could not stop the player because it wasn't running.")
+                        if self.player != None:
+                            if self.DEBUG:
+                                print("player object existed")
+                            if self.respeaker_detected == False:
+                                self.player.stdin.write(b'q')
+                                self.player.stdin.flush()
+                            self.player.terminate()
+                            self.player.kill()
+                            #os.system('pkill ffplay')
+                            if self.respeaker_detected:
+                                os.system('pkill ffplay')
+                            else:
+                                os.system('pkill omxplayer')
+                            self.player = None
+                
+                        else:
+                            if self.DEBUG:
+                                print("Could not stop the player because it wasn't running.")
+                                
                 except Exception as ex:
                     if self.DEBUG:
                         print("Error stopping audio player: " + str(ex))
@@ -944,11 +1151,8 @@ class InternetRadioAdapter(Adapter):
             print("Setting audio output volume to " + str(volume))
             print("self.player: " + str(self.player))
         
-        set_volume_via_radio_state = False    
-        if self.respeaker_detected:
-            set_volume_via_radio_state = True # changes volume by completely restarting the player and giving it the new initial volume value
-            print("set_audio_volume: set_volume_via_radio_state is true")
-            
+        set_volume_via_radio_state = False   
+        
         if int(volume) != self.persistent_data['volume']:
             self.persistent_data['volume'] = int(volume)
             self.save_persistent_data()
@@ -958,85 +1162,99 @@ class InternetRadioAdapter(Adapter):
             if self.DEBUG:
                 print("Volume did not change")
                 
-        try:
-            if self.player != None and self.respeaker_detected == False:
                 
-                if self.DEBUG:
-                    print("Trying dbus volume")
-
-                omxplayerdbus_user = run_command('cat /tmp/omxplayerdbus.${USER:-root}')
-                if self.DEBUG:
-                    print("DBUS_SESSION_BUS_ADDRESS: " + str(omxplayerdbus_user))
-                environment = os.environ.copy()
-                if omxplayerdbus_user != None:
-                    if self.DEBUG:
-                        print("trying dbus-send")
-                    environment["DBUS_SESSION_BUS_ADDRESS"] = str(omxplayerdbus_user).strip()
-                    environment["DISPLAY"] = ":0"
-                
-                    #if self.DEBUG:
-                    #    print("environment: " + str(environment))
-                    
-                    dbus_volume = volume / 100
-                    if self.DEBUG:
-                        print("dbus_volume: " + str(dbus_volume))
-                    
-                    dbus_command = 'dbus-send --print-reply --session --reply-timeout=500 --dest=org.mpris.MediaPlayer2.omxplayer /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:"org.mpris.MediaPlayer2.Player" string:"Volume" double:' + str(dbus_volume)
-                    #export DBUS_SESSION_BUS_ADDRESS=$(cat /tmp/omxplayerdbus.${USER:-root})
-                    dbus_process = subprocess.Popen(dbus_command, 
-                                    env=environment,
-                                    shell=True,				# Streaming to bluetooth seems to only work if shell is true. The position of the volume string also seemed to matter
-                                    stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    close_fds=True)
-                
-                    stdout,stderr = dbus_process.communicate()
-                    if len(stderr) > 4:
-                        set_volume_via_radio_state = True
-                    else:
-                        set_volume_via_radio_state = False
-                    
-                    if self.DEBUG:
-                        print("dbus stdout: " + str(stdout))
-                        print("dbus stderr: " + str(stderr))
-                
-                    #dbus_result = dbus_process.stdout.read()
-                    #dbus_process.stdout.close()
-                
-                
-                
-                    # Check that omxplayer wasn't doubled..
-                    ps = run_command("ps -aux | grep '/usr/bin/omxplayer.bin'")
-                    #ps = run_command('ps -ef | grep omxplayer | grep /bin/bash')
-
-                    processes = ps.split('\n')
-
-                    omx_count = 0
-                    nfields = len(processes[0].split()) - 1
-                    for row in processes[1:]:
-                        if 'grep' in row:
-                            #print("skipping grep line")
-                            continue
-                        #print(" -->  " + str(row))
-                        parts = row.split(None, nfields)
-                        
-                        if omx_count > 0:
-                            #print("parts[1]: " + str(parts))
-                            if len(parts) > 0:
-                                if self.DEBUG:
-                                    print("TOO MANY OMX PLAYERS. Killing one.")
-                                run_command('kill -9 ' + str(parts[1]))
-                            
-                        if 'defunct' not in row:
-                            omx_count += 1
+        if self.use_vlc:
+            if self.DEBUG:
+                print("setting VLC volume")
+            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+        
+        else:
+             
+            if self.respeaker_detected:
+                set_volume_via_radio_state = True # changes volume by completely restarting the player and giving it the new initial volume value
+                print("set_audio_volume: set_volume_via_radio_state is true")
             
-            else:
-                self.set_radio_state(self.persistent_data['power'],False)
+        
+                
+            try:
+                if self.player != None and self.respeaker_detected == False:
+                
+                    if self.DEBUG:
+                        print("Trying dbus volume")
+
+                    omxplayerdbus_user = run_command('cat /tmp/omxplayerdbus.${USER:-root}')
+                    if self.DEBUG:
+                        print("DBUS_SESSION_BUS_ADDRESS: " + str(omxplayerdbus_user))
+                    environment = os.environ.copy()
+                    if omxplayerdbus_user != None:
+                        if self.DEBUG:
+                            print("trying dbus-send")
+                        environment["DBUS_SESSION_BUS_ADDRESS"] = str(omxplayerdbus_user).strip()
+                        environment["DISPLAY"] = ":0"
+                
+                        #if self.DEBUG:
+                        #    print("environment: " + str(environment))
                     
-        except Exception as ex:
-            print("Error trying to set volume via dbus: " + str(ex))
-            set_volume_via_radio_state= True
+                        dbus_volume = volume / 100
+                        if self.DEBUG:
+                            print("dbus_volume: " + str(dbus_volume))
+                    
+                        dbus_command = 'dbus-send --print-reply --session --reply-timeout=500 --dest=org.mpris.MediaPlayer2.omxplayer /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:"org.mpris.MediaPlayer2.Player" string:"Volume" double:' + str(dbus_volume)
+                        #export DBUS_SESSION_BUS_ADDRESS=$(cat /tmp/omxplayerdbus.${USER:-root})
+                        dbus_process = subprocess.Popen(dbus_command, 
+                                        env=environment,
+                                        shell=True,				# Streaming to bluetooth seems to only work if shell is true. The position of the volume string also seemed to matter
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        close_fds=True)
+                
+                        stdout,stderr = dbus_process.communicate()
+                        if len(stderr) > 4:
+                            set_volume_via_radio_state = True
+                        else:
+                            set_volume_via_radio_state = False
+                    
+                        if self.DEBUG:
+                            print("dbus stdout: " + str(stdout))
+                            print("dbus stderr: " + str(stderr))
+                
+                        #dbus_result = dbus_process.stdout.read()
+                        #dbus_process.stdout.close()
+                
+                
+                
+                        # Check that omxplayer wasn't doubled..
+                        ps = run_command("ps -aux | grep '/usr/bin/omxplayer.bin'")
+                        #ps = run_command('ps -ef | grep omxplayer | grep /bin/bash')
+
+                        processes = ps.split('\n')
+
+                        omx_count = 0
+                        nfields = len(processes[0].split()) - 1
+                        for row in processes[1:]:
+                            if 'grep' in row:
+                                #print("skipping grep line")
+                                continue
+                            #print(" -->  " + str(row))
+                            parts = row.split(None, nfields)
+                        
+                            if omx_count > 0:
+                                #print("parts[1]: " + str(parts))
+                                if len(parts) > 0:
+                                    if self.DEBUG:
+                                        print("TOO MANY OMX PLAYERS. Killing one.")
+                                    run_command('kill -9 ' + str(parts[1]))
+                            
+                            if 'defunct' not in row:
+                                omx_count += 1
+            
+                else:
+                    self.set_radio_state(self.persistent_data['power'],False)
+                    
+            except Exception as ex:
+                print("Error trying to set volume via dbus: " + str(ex))
+                set_volume_via_radio_state= True
             
         self.set_volume_on_thing(volume)
         #if self.player == None:
@@ -1133,51 +1351,76 @@ class InternetRadioAdapter(Adapter):
             print("Setting audio output selection to: " + str(selection))
             
             
-        if str(selection) == 'Bluetooth speaker':
-            self.persistent_data['audio_output'] = str(selection)
-            self.save_persistent_data()
+            
+        if self.use_vlc:
+            
+            if str(selection) in self.vlc_devices.keys():  #self.vlc_ui_output_devices:
+                self.persistent_data['audio_output'] = str(selection)
+            else:
+                self.persistent_data['audio_output'] = self.vlc_devices.keys()[0]
+                
             if self.devices['internet-radio'] != None:
                 self.devices['internet-radio'].properties['audio output'].update( str(selection) )
+                
+            # Restart the radio player
             if self.persistent_data['power']:
                 if self.DEBUG:
                     print("restarting radio with new audio output")
                 self.set_radio_state(True)
             
-        else:
-            # Get the latest audio controls
-            self.audio_controls = get_audio_controls()
-            if self.DEBUG:
-                print(self.audio_controls)
-        
-            try:        
-                for option in self.audio_controls:
-                    if str(option['human_device_name']) == str(selection):
-                        if self.DEBUG:
-                            print("CHANGING INTERNET RADIO AUDIO OUTPUT")
-                        # Set selection in persistence data
-                        self.persistent_data['audio_output'] = str(selection)
-                        if self.DEBUG:
-                            print("persistent_data is now: " + str(self.persistent_data))
-                        self.save_persistent_data()
-                    
-                        if self.DEBUG:
-                            print("new selection on thing: " + str(selection))
-                        try:
-                            if self.DEBUG:
-                                print("self.devices = " + str(self.devices))
-                            if self.devices['internet-radio'] != None:
-                                self.devices['internet-radio'].properties['audio output'].update( str(selection) )
-                        except Exception as ex:
-                            print("Error setting new audio output selection:" + str(ex))
-        
-                        if self.persistent_data['power']:
-                            if self.DEBUG:
-                                print("restarting radio with new audio output")
-                            self.set_radio_state(True)
-                        break
             
-            except Exception as ex:
-                print("Error in set_audio_output: " + str(ex))
+            
+            
+            
+            
+        else:
+        
+            if str(selection) == 'Bluetooth speaker':
+                self.persistent_data['audio_output'] = str(selection)
+                self.save_persistent_data()
+                if self.devices['internet-radio'] != None:
+                    self.devices['internet-radio'].properties['audio output'].update( str(selection) )
+                if self.persistent_data['power']:
+                    if self.DEBUG:
+                        print("restarting radio with new audio output")
+                    self.set_radio_state(True)
+            
+            else:
+                # Get the latest audio controls
+                self.audio_controls = get_audio_controls()
+                if self.DEBUG:
+                    print(self.audio_controls)
+        
+                try:        
+                    for option in self.audio_controls:
+                        if str(option['human_device_name']) == str(selection):
+                            if self.DEBUG:
+                                print("CHANGING INTERNET RADIO AUDIO OUTPUT")
+                            # Set selection in persistence data
+                            self.persistent_data['audio_output'] = str(selection)
+                            if self.DEBUG:
+                                print("persistent_data is now: " + str(self.persistent_data))
+                            self.save_persistent_data()
+                    
+                            if self.DEBUG:
+                                print("new selection on thing: " + str(selection))
+                            try:
+                                if self.DEBUG:
+                                    print("self.devices = " + str(self.devices))
+                                if self.devices['internet-radio'] != None:
+                                    self.devices['internet-radio'].properties['audio output'].update( str(selection) )
+                            except Exception as ex:
+                                print("Error setting new audio output selection:" + str(ex))
+        
+                            if self.persistent_data['power']:
+                                if self.DEBUG:
+                                    print("restarting radio with new audio output")
+                                self.set_radio_state(True)
+                            break
+            
+                except Exception as ex:
+                    print("Error in set_audio_output: " + str(ex))
+        
 
 
 
@@ -1355,10 +1598,36 @@ class InternetRadioDevice(Device):
                             None)
 
 
-
+           
             if sys.platform != 'darwin': #darwin = Mac OS
                 if self.DEBUG:
-                    print("adding audio output property with list: " + str(audio_output_list))
+                    print("Adding audio output property")
+                    
+                selected_output = self.adapter.persistent_data['audio_output']
+                if self.DEBUG:
+                    print("legacy audio_output_list: " + str(audio_output_list))
+                    print("initial selected output: " + str(selected_output))
+                    
+                try:
+                    # Let VLC override everything if it exists
+                    if self.adapter.use_vlc == True:
+                        if self.DEBUG:
+                            print("Using VLC audio output list for audio output property")
+                        
+                        audio_output_list = list(self.adapter.vlc_devices.keys())
+                        if self.DEBUG:
+                            print("new VLC audio_output_list : " + str(audio_output_list))
+                        if selected_output not in audio_output_list:
+                            #if self.DEBUG:
+                            
+                            selected_output = audio_output_list[0]
+                            if self.DEBUG:
+                                print("Had to set alternative audio output for property: " + str(selected_output))
+                        else:
+                            print("ok, selected output was in vlc list")
+                except Exception as ex:
+                    print("generate vlc audio output list error: " + str(ex))
+                
                 self.properties["audio output"] = InternetRadioProperty(
                                 self,
                                 "audio output",
@@ -1368,7 +1637,7 @@ class InternetRadioDevice(Device):
                                     'readOnly': False,
                                     'enum': audio_output_list,
                                 },
-                                self.adapter.persistent_data['audio_output'])
+                                selected_output)
 
 
         except Exception as ex:
