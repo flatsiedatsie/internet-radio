@@ -668,7 +668,57 @@ body.zoom2 #extension-internet-radio-volume-up-button{
 
 .extension-internet-radio-pause-icon{
     display:none;
+    position:relative;
+	background-image: url(../images/speaker-icon.svg);
+    cursor:pointer;
+    background-size: 65%;
+    background-position: 45% center;
+    background-repeat: no-repeat;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    width:5rem;
+    height:5rem;
+    border-radius: 2.8rem;
+    background-color:rgba(0,0,0,.8);
+    border:2px solid transparent;
 }
+
+.extension-internet-radio-item-playing .extension-internet-radio-pause-icon{
+    display:block;
+	overflow:hidden;
+    border-radius:50;
+}
+
+.extension-internet-radio-item-playing .extension-internet-radio-pause-icon:after {
+  content: "";
+  position: absolute;
+  border-right: 0.5em solid #fff;
+  border-radius: 50%;
+  left: 2rem;
+  margin-top: 2rem;
+  font-size: .5rem;
+  border-right: 0.4em solid #fff;
+  animation: sound 1s 1s infinite alternate;
+}
+
+@keyframes sound {
+  from {
+    top: 0;
+    right: 0em;
+    width: 1.5em;
+    height: 1.5em;
+  }
+  to {
+    top: -.5;
+    right: -.5em;
+    width: 2.5em;
+    height: 2.5em;
+  }
+}
+
+
 /*
 .extension-internet-radio-item-playing .extension-internet-radio-pause-icon{
     display:inline-block;

@@ -351,7 +351,7 @@
                                         
                                         try{
                                             if(this.debug){
-                                                console.log("internet radio poll: ", body);
+                                                console.log("internet radio debug: poll response: ", body);
                                             }
                                         
                                             // Playing
@@ -1002,7 +1002,34 @@
 
 						}).catch((e) => {
 							console.log("internet-radio: play button: error: ", e);
-							//pre.innerText = "Could not delete that station"
+						});
+                        
+                        
+					});
+                    
+                    
+                    // Pause buttons on item. (speaker icon)
+					const pause_button = clone.querySelectorAll('.extension-internet-radio-pause-icon')[0];
+					pause_button.addEventListener('click', (event) => {
+
+						// Send new values to backend
+						window.API.postJson(
+							`/extensions/${this.id}/api/ajax`,
+							{'action':'pause'}
+						).then((body) => { 
+							if(this.debug){
+							    console.log("debug: pause reaction: ", body);
+							}
+                            console.log("debug: pause reaction: ", body);
+                            if(body.state == 'ok'){
+                                this.playing = false;
+                                document.body.classList.remove('extension-internet-radio-playing');
+                                event.path[2].classList.remove('extension-internet-radio-item-playing');
+                                document.getElementById('extension-internet-radio-now-playing').innerText = "";
+                            }
+
+						}).catch((e) => {
+							console.log("internet-radio: pause button: error: ", e);
 						});
                         
                         

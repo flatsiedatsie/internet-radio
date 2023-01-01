@@ -232,6 +232,24 @@ class InternetRadioAPIHandler(APIHandler):
                           content=json.dumps({'state' : state}),
                         )
                         
+                    elif action == 'pause':
+                        if self.DEBUG:
+                            print("in pause")
+                        
+                        state = 'ok'
+                        try:
+                            self.adapter.set_radio_state(False)
+                        except Exception as ex:
+                            if self.DEBUG:
+                                print("API: error stopping: " + str(ex))
+                            state = "Error: could not stop playing"
+                            
+                        return APIResponse(
+                          status=200,
+                          content_type='application/json',
+                          content=json.dumps({'state' : state}),
+                        )
+                        
                     elif action == 'toggle':
                         if self.DEBUG:
                             print("in toggle")

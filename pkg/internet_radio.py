@@ -103,7 +103,6 @@ class InternetRadioAdapter(Adapter):
         
         
         # VLC
-        self.use_vlc = False
         self.vlc_player = None
         self.previous_intended_audio_output = None
         #self.vlc_current_output = 'default'
@@ -111,9 +110,11 @@ class InternetRadioAdapter(Adapter):
         self.played_silence = False
         self.actual_audio_output_device = None
         
+        self.use_vlc = False
         vlc_check_output = run_command('which vlc')
-        if '/vlc' in vlc_check_output:
-            self.use_vlc = True
+        if vlc_check_output != None:
+            if '/vlc' in vlc_check_output:
+                self.use_vlc = True
             
             
         if self.use_vlc:
@@ -242,7 +243,8 @@ class InternetRadioAdapter(Adapter):
                 self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output': "", 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
 
 
-        print("\nself.persistent_data: " + str(self.persistent_data))
+        if self.DEBUG:
+            print("\nself.persistent_data: " + str(self.persistent_data))
 
         # LOAD CONFIG
 
@@ -334,7 +336,7 @@ class InternetRadioAdapter(Adapter):
         try:
             self.set_radio_state(bool(self.persistent_data['power']))
         except Exception as ex:
-            print("Could not restore radio station: " + str(ex))
+            print("Error, could not restore radio station: " + str(ex))
 
         #print("internet radio adapter init complete")
 
@@ -389,7 +391,17 @@ class InternetRadioAdapter(Adapter):
                 if self.poll_counter > 20:
                     self.poll_counter = 0
                 
-          
+                    
+                    
+                    
+                    #if self.persistent_data['power']:
+                    #    if self.DEBUG:
+                    #        print("20 second check: should be playing")
+                    
+                        #vlc_crash_check = run_command('ps aux | grep vlc')
+                        #if self.DEBUG:
+                        #    print("vlc_crash_check: 'ps aux | grep vlc' output: " + str(vlc_crash_check))
+                    
 
         
             
@@ -795,7 +807,6 @@ class InternetRadioAdapter(Adapter):
             #  turn on
             #
             if power:
-                
                 
                 if self.use_vlc:
                     
