@@ -6,6 +6,10 @@ https://www.candlesmarthome.com
 
 It has a nice interface to find and manage radio stations.
 
+![Stations overview](screenshot.jpg?raw=true "Stations overview")
+
+![Stations search](screenshot.png?raw=true "Search")
+
 It also creates a thing with a few properties:
 - Select the desired station from a drop-down.
 - You can set the audio volume
