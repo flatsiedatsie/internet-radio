@@ -19,7 +19,7 @@ It also creates a thing with a few properties:
 
 It uses persistence to remember the previous state (e.g. selected radio station, volume, playing).
 
-You will need to have `omx-player` installed on your system, if it isn't already.
+You will need to have `vlc-player` installed on your system, if it isn't already.
 Additionally, on Linux, you will need `alsa-utils` installed.
 
-The Bluetooth functonality only works if Bluealsa is installed (The Candle Controller comes with it pre-installed)
+The Bluetooth functonality only works if Bluealsa is installed (The Candle Controller comes with all this pre-installed)
