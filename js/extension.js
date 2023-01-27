@@ -33,6 +33,9 @@
             this.radio_browser_server = "";
             this.get_more_search_results = true; // if the searh should give more than 20 results
             
+            this.busy_polling = false;
+            this.busy_polling_counter = 0;
+            
             
             // Debug
             /*
@@ -343,6 +346,20 @@
                                 const now_playing_element = document.getElementById('extension-internet-radio-now-playing');
                                 try{
                                     // /poll
+                                    
+                                    if(this.busy_polling){
+                                        this.busy_polling_counter++;
+                                        
+                                        if(this.busy_polling_counter < 20){
+                                            return;
+                                        }
+                                        else{
+                                            this.busy_polling_counter = 0;
+                                        }
+                                    }
+                                    this.busy_polling = true;
+                                    
+                                    
                     		        window.API.postJson(
                     		          `/extensions/${this.id}/api/ajax`,
                                         {'action':'poll'}
@@ -353,7 +370,8 @@
                                             if(this.debug){
                                                 console.log("internet radio debug: poll response: ", body);
                                             }
-                                        
+                                            this.busy_polling = false;
+                                            this.busy_polling_counter = 0;
                                             // Playing
                                             if(typeof body.playing != 'undefined'){
                                                 this.playing = body.playing;
@@ -953,9 +971,6 @@
                             this.play_audio_in_browser(preview_url);
                         }
                         
-                        
-					    
-                        
                         //document.getElementById('extension-internet-radio-toggle-button').style.display = 'block';
 					});
                     
@@ -965,7 +980,9 @@
 					const play_button = clone.querySelectorAll('.extension-internet-radio-play-icon')[0];
                     play_button.setAttribute('data-stream_url', stream_url);
 					play_button.addEventListener('click', (event) => {
-					    //console.log("event: ", event);
+					    if(this.debug){
+                            console.log("internet radio: play button event: ", event);
+                        }
                         //console.log(event.path[2]);
                         
                         try{
@@ -973,7 +990,7 @@
                             for (var i = 0; i < playing_items.length; ++i) {
                                 playing_items[i].classList.remove('extension-internet-radio-item-playing');
                             }
-                            event.path[2].classList.add('extension-internet-radio-item-playing');
+                            event.target.closest('.extension-internet-radio-item').classList.add('extension-internet-radio-item-playing');
                             document.getElementById('extension-internet-radio-now-playing').innerText = "";
                         }
                         catch (e){
