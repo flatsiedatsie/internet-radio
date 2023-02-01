@@ -39,7 +39,7 @@ try:
 except Exception as ex:
     print("Unable to load APIHandler (which is used for UI extention): " + str(ex))
 
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib'))
+#sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib'))
 
 _TIMEOUT = 3
 

@@ -1,7 +1,7 @@
 {
   "type": "object",
   "author": "CandleSmartHome.com",
-  "description": "internet radio player. Allows you to search for and store your favourite stations.",
+  "description": "Internet radio player. Allows you to search for and store your favourite stations.",
   "content_scripts": [
     {
       "css": [
@@ -51,7 +51,7 @@
     }
   },
   "short_name": "Radio",
-  "version": "2.2.7",
+  "version": "2.2.8",
   "web_accessible_resources": [
     "css/*.css",
     "images/*.svg",
