@@ -189,7 +189,7 @@ class InternetRadioAdapter(Adapter):
             if 'seeed' in respeaker_check:
                 self.respeaker_detected = True
                 if self.DEBUG:
-                    print("respeaker hat detected, will use ffplay instead of omxplayer")
+                    print("respeaker hat detected")
 
         # Get persistent data
         try:
@@ -310,8 +310,8 @@ class InternetRadioAdapter(Adapter):
 
 
         # temporary change until VLC is implemented
-        if os.path.isfile('/boot/candle_original_version.txt'):
-            self.respeaker_detected = True
+        #if os.path.isfile('/boot/candle_original_version.txt'):
+        #    self.respeaker_detected = True
         # Restore volume
         #try:
         #    self.set_audio_volume(self.persistent_data['volume'])
