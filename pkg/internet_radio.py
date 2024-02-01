@@ -30,7 +30,7 @@ import requests  # noqa
 import threading
 import subprocess
 
-from gateway_addon import Database, Adapter, Device, Property
+from gateway_addon import Database, Adapter, Device, Property, Event
 
 try:
     #from gateway_addon import APIHandler, APIResponse
@@ -51,6 +51,8 @@ if 'WEBTHINGS_HOME' in os.environ:
     _CONFIG_PATHS.insert(0, os.path.join(os.environ['WEBTHINGS_HOME'], 'config'))
 
 
+
+        
 
 class InternetRadioAdapter(Adapter):
     """Adapter for Internet Radio"""
@@ -118,7 +120,7 @@ class InternetRadioAdapter(Adapter):
             
             
         if self.use_vlc:
-            print("VLC detected")
+            #print("VLC detected")
             self.vlc_player = vlc.MediaPlayer()
             #self.vlc_current_output = self.vlc_player.audio_output_device_get()
 
@@ -131,7 +133,7 @@ class InternetRadioAdapter(Adapter):
                     desc = mod.description.decode('utf-8', 'ignore')
                     dev = mod.device.decode('utf-8', 'ignore')
                     
-                    print(f'index = {index}, desc = {desc}, device = {dev}')
+                    #print(f'index = {index}, desc = {desc}, device = {dev}')
                     
                     if desc == 'Default':
                         self.vlc_devices['Automatic'] = dev
@@ -155,11 +157,12 @@ class InternetRadioAdapter(Adapter):
                     index += 1
                 
                 #print("self.vlc_output_device_ids: " + str(self.vlc_output_device_ids))
-                print("VLC audio output devices: " + str(self.vlc_devices))
+                #print("VLC audio output devices: " + str(self.vlc_devices))
             
             
         else:
-            print("VLC not detected")
+            pass
+            #print("VLC not detected")
         
         
         # Bluetooth
@@ -206,7 +209,8 @@ class InternetRadioAdapter(Adapter):
                         else:
                             self.persistent_data['audio_output'] = ""
                 except:
-                    print("Error fixing audio output in persistent data")
+                    if self.DEBUG:
+                        print("Error fixing audio output in persistent data")
                 
                 try:
                     if 'stations' not in self.persistent_data:
@@ -295,12 +299,33 @@ class InternetRadioAdapter(Adapter):
         
         # Create the radio device
         try:
-            internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list, self.audio_output_options)
-            self.handle_device_added(internet_radio_device)
+            self.internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list, self.audio_output_options)
+            self.handle_device_added(self.internet_radio_device)
             if self.DEBUG:
-                print("internet_radio_device created")
+                 print(".")
+                 print("..")
+                 print("internet_radio_device created")
             self.devices['internet-radio'].connected = True
             self.devices['internet-radio'].connected_notify(True)
+
+            devv = self.get_device('internet-radio')
+            print("devv: " + str(devv))
+            test_event = InternetRadioEvent(devv,"hello","hooia")
+            devv.event_notify(test_event)
+            #test_event = Event(self.internet_radio_device,"hello")
+            #print("\n  test event type: " + str(type(test_event )) + "  -  " + str(test_event.as_dict()))
+            
+            #self.devices['internet-radio'].add_event(test_event,{})
+            #self.devices['internet-radio'].event_notify(test_event)
+            #self.internet_radio_device.event_notify(test_event)
+
+            #print("\n  event type: " + str(type(self.devices['internet-radio']['events'][0])))
+            
+
+            if self.DEBUG:
+                print("...")
+                print("..")
+                print(".")
 
         except Exception as ex:
             print("Could not create internet_radio_device: " + str(ex))
@@ -807,6 +832,8 @@ class InternetRadioAdapter(Adapter):
             #  turn on
             #
             if power:
+                
+                self.set_status_on_thing("Connecting")
                 
                 if self.use_vlc:
                     
@@ -1556,6 +1583,60 @@ class InternetRadioAdapter(Adapter):
 
 
 
+
+
+
+
+
+
+
+
+
+#
+# EVENT
+#
+
+class InternetRadioEvent(Event):
+    """Candle event type."""
+
+    def __init__(self, device, title, data=None):
+        """
+        Initialize the object.
+        event -- the device related to this event
+        """
+        try:
+            
+            print("\n = = = \ndoing event init")
+        
+            #print("Initialisation of notifier")
+            name = 'radio_event'
+            self.name = name
+            Event.__init__(self, device, title, data)
+            #Notifier.__init__(self, adapter, 'voco')
+            self.data = data
+            self.device = device
+            self.title = title
+            print("eventtt: " + str(self))
+        except Exception as ex:
+            print("error initting InternetRadioEvent: " + str(ex))  
+
+        #self.description = 'I am an event'
+
+        #self.outlets['speak'] = VocoOutlet(self,'speak')
+        #speak = VocoOutlet(self,'speak','Speak')
+        #self.handle_outlet_added(speak)
+        
+        #self.device.adapter.manager_proxy.send_event_notification(self)
+        print("event init complete")
+
+
+
+
+
+
+
+
+
 #
 # DEVICE
 #
@@ -1585,6 +1666,30 @@ class InternetRadioDevice(Device):
         self.radio_station_names_list = radio_station_names_list
 
         try:
+            
+            try:
+                
+                #self.thing.add_event(OverheatedEvent(self.thing, 102))
+                
+                #self.add_event("whatever", {'meta':'data'})
+                #self.add_event(InternetRadioEvent(self,"blaaaat"))
+                
+                
+                #speak = VocoOutlet(self,'speak','Speak')
+                        #self.handle_outlet_added(speak)
+            
+                test_event2 = InternetRadioEvent(self,"blaaaa","boooe")
+                #self.add_event(test_event2,{})
+                #self.add_event(InternetRadioEvent(self,"blaaaa",metadata=""))
+                
+                print("InternetRadioEvent: " + str(test_event2.as_dict()))
+                
+                #self.event_notify("hello2")
+                
+                self.event_notify(test_event2)
+                print("device: should have emitted an event")
+            except Exception as ex:
+                print("EVENT ERROR: " + str(ex))
             
             # this will also call handle_device_added
             self.update_stations_property(False)
