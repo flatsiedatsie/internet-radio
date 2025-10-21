@@ -16,7 +16,7 @@ jobs:
     - name: Dump upload url to file
       run: echo '${{ steps.get_release.outputs.upload_url }}' > upload_url
     - name: Upload upload_url
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: upload_url
         path: upload_url
@@ -52,7 +52,7 @@ jobs:
 
     steps:
     - name: Download upload_url
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: upload_url
         path: upload_url
@@ -60,7 +60,7 @@ jobs:
       run: echo "UPLOAD_URL=$(cat upload_url/upload_url)" >> $GITHUB_ENV
     - name: Set release version
       run: echo "RELEASE_VERSION=${GITHUB_REF:10}" >> $GITHUB_ENV
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Use Python ${{ matrix.version }}
       uses: actions/setup-python@v4
       with:
@@ -75,14 +75,14 @@ jobs:
       shell: bash
       
     - name: Upload Release Asset tgz
-      uses: shogo82148/actions-upload-release-asset@v1
+      uses: shogo82148/actions-upload-release-asset@v2
       with:
         #upload_url: ${{ github.event.release.upload_url }}
         upload_url: ${{ env.UPLOAD_URL }}
         asset_path: internet-radio-${{ env.RELEASE_VERSION }}-${{ matrix.platform }}-v${{ matrix.version }}.tgz
       
     - name: Upload Release Asset shasum
-      uses: shogo82148/actions-upload-release-asset@v1
+      uses: shogo82148/actions-upload-release-asset@v2
       with:
         #upload_url: ${{ github.event.release.upload_url }}
         upload_url: ${{ env.UPLOAD_URL }}
