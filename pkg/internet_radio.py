@@ -1624,7 +1624,9 @@ class InternetRadioDevice(Device):
                                 'type': 'boolean'
                             },
                             self.adapter.persistent_data['power'])
-                            
+            
+            
+            
             self.properties["volume"] = InternetRadioProperty(
                             self,
                             "volume",
@@ -1638,6 +1640,10 @@ class InternetRadioDevice(Device):
                                 'unit': 'percent'
                             },
                             self.adapter.persistent_data['volume'])
+                            
+            self.add_action("Lower volume", {});
+            
+            self.add_action("Raise volume", {});
                             
             self.properties["status"] = InternetRadioProperty(
                             self,
@@ -1668,6 +1674,13 @@ class InternetRadioDevice(Device):
                                 'readOnly': True
                             },
                             None)
+
+
+            
+            
+            
+            
+            
 
 
            
@@ -1729,6 +1742,72 @@ class InternetRadioDevice(Device):
 
         if self.DEBUG:
             print("Internet Radio thing has been created.")
+
+
+
+    def perform_action(self,action_object):
+        if self.DEBUG:
+            print("\n\nInternet Radio: in perform_action\n\n")
+        try:
+            
+            action_object.start()
+            
+            if self.DEBUG:
+                print("Internet Radio: in perform_action.  dir(action_object): ", str(dir(action_object)))
+            action_dict = action_object.as_dict()
+            if self.DEBUG:
+                print("Internet Radio: action_dict: ", str(action_dict))
+        
+            if type(self.adapter.persistent_data['volume']) == int and action_dict and action_dict['name']:
+                if self.DEBUG:
+                    print("Internet Radio: performing action.  action_dict.name: ", action_dict['name'])
+                
+                if action_dict['name'] == 'Raise volume':
+                    if self.adapter.persistent_data['volume'] > 20:
+                        if self.adapter.persistent_data['volume'] < 96:
+                            self.adapter.set_audio_volume(self.adapter.persistent_data['volume'] + 5)
+                        else:
+                            self.adapter.set_audio_volume(100)
+                    else:
+                        self.adapter.set_audio_volume(self.adapter.persistent_data['volume'] + 3)
+                
+                    #if self.adapter.persistent_data['volume'] > 100:
+                    #    self.adapter.persistent_data['volume'] = 100
+                    
+                    if self.DEBUG:
+                        print("Internet Radio: action: raised volume to: ", self.adapter.persistent_data['volume'])
+                
+            
+                elif action_dict['name'] == 'Lower volume':
+                    if self.adapter.persistent_data['volume'] > 20:
+                        self.adapter.set_audio_volume(self.adapter.persistent_data['volume'] - 5)
+                    elif self.adapter.persistent_data['volume'] > 2:
+                        self.adapter.set_audio_volume(self.adapter.persistent_data['volume'] - 3)
+                    else:
+                        self.adapter.set_audio_volume(0)
+                    
+                    #if self.adapter.persistent_data['volume'] < 0:
+                    #    self.adapter.persistent_data['volume'] = 0
+                    
+                    if self.DEBUG:
+                        print("Internet Radio: action: lowered volume to: ", self.adapter.persistent_data['volume'])
+        
+                else:
+                    if self.DEBUG:
+                        print("Internet Radio: unexpected action: ", str(action_dict))
+        
+            else:
+                if self.DEBUG:
+                    print("Internet Radio: bad action")
+            
+            action_object.finish()
+            
+        except Exception as ex:
+            if self.DEBUG:
+                print("internet_radio:device: caught error in perform action: ", str(ex))
+        
+        
+        
 
 
     # Creates these options "on the fly", as radio stations get added and removed.
