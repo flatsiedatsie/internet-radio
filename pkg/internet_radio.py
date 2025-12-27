@@ -1862,9 +1862,13 @@ class InternetRadioProperty(Property):
         #print("property: initiated: " + str(self.name))
 
 
-    def set_value(self, value):
+    def set_value(self, value, meta):
         #print("property: set_value called for " + str(self.title))
         #print("property: set value to: " + str(value))
+
+		if meta != None:
+			print("set value: meta: " + str(meta))
+		
         self.set_cached_value(value)
         self.device.notify_property_changed(self)
         
