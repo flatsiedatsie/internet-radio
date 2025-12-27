@@ -678,13 +678,13 @@ class InternetRadioAdapter(Adapter):
                                 song = stream_title
 
                             if len(song) > 20:
-                                song=re.sub("\(.*?\)","",song) # if the string is still quite long, also remove everything in between curly brackets.
+                                song=re.sub(r"\(.*?\)","",song) # if the string is still quite long, also remove everything in between curly brackets.
                             
                             self.set_artist_on_thing(artist)
                             self.set_song_on_thing(song)
                             
                             if len(stream_title) > 20:
-                                stream_title=re.sub("\(.*?\)","",stream_title)
+                                stream_title=re.sub(r"\(.*?\)","",stream_title)
                             info = stream_title
                             
 
