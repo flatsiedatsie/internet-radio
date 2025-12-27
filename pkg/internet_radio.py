@@ -126,7 +126,8 @@ class InternetRadioAdapter(Adapter):
             #self.vlc_current_output = self.vlc_player.audio_output_device_get()
 
             mods = self.vlc_player.audio_output_device_enum()
-            print(" vlc_player mods: ", dir(mods.contents))
+            if self.DEBUG:
+				print(" vlc_player mods: ", dir(mods.contents))
             if mods:
                 index = 0
                 mod = mods
@@ -165,16 +166,19 @@ class InternetRadioAdapter(Adapter):
                         if not 'plughw:CARD' in dev:
                             self.vlc_devices['HDMI 0'] = dev
                     else:
-                        print("AUDIO OUTPUT OPTION FROM VLC FELL THROUGH: dev: ", dev,"  ,desc: ", desc)
+                        if self.DEBUG:
+							print("AUDIO OUTPUT OPTION FROM VLC FELL THROUGH: dev: ", dev,"  ,desc: ", desc)
                     mod = mod.next
                     index += 1
                 
                 #print("self.vlc_output_device_ids: " + str(self.vlc_output_device_ids))
-                print("VLC audio output devices: " + str(self.vlc_devices))
+                if self.DEBUG:
+					print("VLC audio output devices: " + str(self.vlc_devices))
             
             
         else:
-            print("VLC not detected")
+            if self.DEBUG:
+				print("VLC not detected")
         
         
         # Bluetooth
@@ -1884,7 +1888,8 @@ class InternetRadioProperty(Property):
 
 
         except Exception as ex:
-            print("set_value error: " + str(ex))
+            if self.DEBUG:
+				print("set_value error: " + str(ex))
 
 
 
@@ -1937,17 +1942,20 @@ def get_audio_controls():
             #print("simple card name = " + str(simple_card_name))
             
             full_card_name   = re.findall(r"\[([^']+)\]", line_a)[0]
-            print("get_audio_controls: full card name = " + str(full_card_name))
+            if self.DEBUG:
+				print("get_audio_controls: full card name = " + str(full_card_name))
             
             full_device_name = re.findall(r"\[([^']+)\]", line_b)[0]
-            print("get_audio_controls: full device name = " + str(full_device_name))
+            if self.DEBUG:
+				print("get_audio_controls: full device name = " + str(full_device_name))
             
             human_device_name = str(full_device_name)
             
             if human_device_name == 'MAI PCM i2s-hifi-0':
                 human_device_name = full_card_name + ' ' + human_device_name
             
-            print("get_audio_controls: human_device_name: ", human_device_name);
+            if self.DEBUG:
+				print("get_audio_controls: human_device_name: ", human_device_name);
             
             # Raspberry Pi 4
             human_device_name = human_device_name.replace("bcm2835 ALSA","Built-in headphone jack")
@@ -2034,7 +2042,8 @@ def get_audio_controls():
                             break
                             
                 else:
-                    print("get_audio_controls: getting audio volume in complex way failed") 
+                    if self.DEBUG:
+						print("get_audio_controls: getting audio volume in complex way failed") 
                             
                             
                 
