@@ -665,7 +665,7 @@ class InternetRadioAdapter(Adapter):
                         
                         if any(c.isalpha() for c in stream_title) and len(stream_title) > 6:
                             
-                            stream_title=re.sub("\[.*?\]","",stream_title) # remove info between square btrackets
+                            stream_title=re.sub(r"\[.*?\]","",stream_title) # remove info between square brackets
                                            
                             
                             both = stream_title.split(' - ', maxsplit=1)
