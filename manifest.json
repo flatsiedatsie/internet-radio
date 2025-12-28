@@ -51,7 +51,7 @@
     }
   },
   "short_name": "Radio",
-  "version": "2.2.15",
+  "version": "2.2.16",
   "web_accessible_resources": [
     "css/*.css",
     "images/*.svg",
