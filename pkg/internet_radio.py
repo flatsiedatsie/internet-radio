@@ -167,18 +167,18 @@ class InternetRadioAdapter(Adapter):
                             self.vlc_devices['HDMI 0'] = dev
                     else:
                         if self.DEBUG:
-							print("AUDIO OUTPUT OPTION FROM VLC FELL THROUGH: dev: ", dev,"  ,desc: ", desc)
+                            print("AUDIO OUTPUT OPTION FROM VLC FELL THROUGH: dev: ", dev,"  ,desc: ", desc)
                     mod = mod.next
                     index += 1
                 
                 #print("self.vlc_output_device_ids: " + str(self.vlc_output_device_ids))
                 if self.DEBUG:
-					print("VLC audio output devices: " + str(self.vlc_devices))
+                    print("VLC audio output devices: " + str(self.vlc_devices))
             
             
         else:
             if self.DEBUG:
-				print("VLC not detected")
+                print("VLC not detected")
         
         
         # Bluetooth
@@ -1866,8 +1866,8 @@ class InternetRadioProperty(Property):
         #print("property: set_value called for " + str(self.title))
         #print("property: set value to: " + str(value))
 
-		if meta != None:
-			print("set value: meta: " + str(meta))
+        if meta != None:
+            print("set value: meta: " + str(meta))
 		
         self.set_cached_value(value)
         self.device.notify_property_changed(self)
@@ -1893,7 +1893,7 @@ class InternetRadioProperty(Property):
 
         except Exception as ex:
             if self.DEBUG:
-				print("set_value error: " + str(ex))
+                print("set_value error: " + str(ex))
 
 
 
@@ -1946,20 +1946,17 @@ def get_audio_controls():
             #print("simple card name = " + str(simple_card_name))
             
             full_card_name   = re.findall(r"\[([^']+)\]", line_a)[0]
-            if self.DEBUG:
-				print("get_audio_controls: full card name = " + str(full_card_name))
+            #print("get_audio_controls: full card name = " + str(full_card_name))
             
             full_device_name = re.findall(r"\[([^']+)\]", line_b)[0]
-            if self.DEBUG:
-				print("get_audio_controls: full device name = " + str(full_device_name))
+            #print("get_audio_controls: full device name = " + str(full_device_name))
             
             human_device_name = str(full_device_name)
             
             if human_device_name == 'MAI PCM i2s-hifi-0':
                 human_device_name = full_card_name + ' ' + human_device_name
             
-            if self.DEBUG:
-				print("get_audio_controls: human_device_name: ", human_device_name);
+            #print("get_audio_controls: human_device_name: ", human_device_name);
             
             # Raspberry Pi 4
             human_device_name = human_device_name.replace("bcm2835 ALSA","Built-in headphone jack")
@@ -2045,10 +2042,9 @@ def get_audio_controls():
                             
                             break
                             
-                else:
-                    if self.DEBUG:
-						print("get_audio_controls: getting audio volume in complex way failed") 
-                            
+                else:            
+                    #print("get_audio_controls: getting audio volume in complex way failed") 
+                    pass        
                             
                 
             
