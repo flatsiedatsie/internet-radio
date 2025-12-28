@@ -127,7 +127,7 @@ class InternetRadioAdapter(Adapter):
 
             mods = self.vlc_player.audio_output_device_enum()
             if self.DEBUG:
-				print(" internet radio debug: vlc_player mods: ", dir(mods.contents))
+                print(" internet radio debug: vlc_player mods: ", dir(mods.contents))
             if mods:
                 index = 0
                 mod = mods
