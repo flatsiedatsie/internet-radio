@@ -120,7 +120,7 @@ class InternetRadioAdapter(Adapter):
         if self.use_vlc:
             if self.DEBUG:
                 print("VLC detected")
-            self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none')
+            self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=dummy', '--no-video') # --vout=dummy --vout=none via https://github.com/oaubert/python-vlc/issues/64
             #self.vlc_player = vlc.MediaPlayer()
             self.vlc_player = self.vlc_instance.media_player_new()
             #self.vlc_current_output = self.vlc_player.audio_output_device_get()
