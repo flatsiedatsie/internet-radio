@@ -120,7 +120,7 @@ class InternetRadioAdapter(Adapter):
         if self.use_vlc:
             if self.DEBUG:
                 print("VLC detected")
-            self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none')
+            self.vlc_instance = vlc.Instance('--no-lua','--aout=pipewire','--vout=none')
             #self.vlc_player = vlc.MediaPlayer()
             self.vlc_player = self.vlc_instance.media_player_new()
             #self.vlc_current_output = self.vlc_player.audio_output_device_get()
@@ -1862,13 +1862,10 @@ class InternetRadioProperty(Property):
         #print("property: initiated: " + str(self.name))
 
 
-    def set_value(self, value, meta):
+    def set_value(self, value, meta=None):
         #print("property: set_value called for " + str(self.title))
         #print("property: set value to: " + str(value))
 
-        if meta != None:
-            print("set value: meta: " + str(meta))
-		
         self.set_cached_value(value)
         self.device.notify_property_changed(self)
         
@@ -1889,12 +1886,13 @@ class InternetRadioProperty(Property):
             if self.title == 'audio output':
                 self.device.adapter.set_audio_output(str(value))
                 #self.device.adapter.set_radio_state(True) # If the user changes the output, it should switch to that output.
-
-
+               
         except Exception as ex:
             if self.DEBUG:
                 print("set_value error: " + str(ex))
-
+        
+        if meta != None:
+            print("set value: meta: " + str(meta))
 
 
     def update(self, value):
