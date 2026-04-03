@@ -86,12 +86,17 @@ class InternetRadioAdapter(Adapter):
         self.persistence_file_path = os.path.join(self.user_profile['dataDir'], self.addon_name, 'persistence.json')
         self.bluetooth_persistence_file_path = os.path.join(self.user_profile['dataDir'], 'bluetoothpairing', 'persistence.json')
 
+        self.pipewire_enabled = False
+        pipewire_test = str(run_command('ps aux | grep pipewire'))
+        if 'bin/pipewire' in pipewire_test.lower():
+            self.pipewire_enabled = True
+
         self.running = True
         self.last_connection_fail_time = 0
         self.poll_counter = 0 # once every 20 UI polls we find out the 'now playing'data. If a play button on the UI is pressed, this counter is also reset.
         self.show_buttons_everywhere = False
         
-        self.in_first_run = True;
+        self.in_first_run = True
         self.audio_output_options = []
         self.now_playing = "" # will hold artist and song title
         self.current_stream_has_now_playing_info = True
@@ -116,64 +121,12 @@ class InternetRadioAdapter(Adapter):
             if '/vlc' in vlc_check_output:
                 self.use_vlc = True
             
-            
+       
+        self.vlc_devices = {}
+        self.vlc_instance = None
         if self.use_vlc:
             if self.DEBUG:
                 print("VLC detected")
-            self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=dummy', '--no-video') # --vout=dummy --vout=none via https://github.com/oaubert/python-vlc/issues/64
-            #self.vlc_player = vlc.MediaPlayer()
-            self.vlc_player = self.vlc_instance.media_player_new()
-            #self.vlc_current_output = self.vlc_player.audio_output_device_get()
-
-            mods = self.vlc_player.audio_output_device_enum()
-            if self.DEBUG:
-                print(" internet radio debug: vlc_player mods: ", dir(mods.contents))
-            if mods:
-                index = 0
-                mod = mods
-                while mod:
-                    mod = mod.contents
-                    desc = mod.description.decode('utf-8', 'ignore')
-                    dev = mod.device.decode('utf-8', 'ignore')
-                    
-                    dev = dev.replace('sysdefault:CARD=vc4hdmi0','plughw:0,0')
-                    dev = dev.replace('sysdefault:CARD=vc4hdmi1','plughw:1,0')
-                    
-                    if self.DEBUG:
-                        print(f'index = {index}, desc = {desc}, device = {dev}')
-                    
-                    if desc == 'Default':
-                        self.vlc_devices['Automatic'] = dev
-                        
-                    elif 'eadphone' in desc and 'sysdefault' in dev:
-                        self.vlc_devices['Headphone jack'] = dev
-                        
-                    elif 'seeed-' in desc and 'plughw:' in dev:
-                        self.vlc_devices['ReSpeaker headphone jack'] = dev
-                        
-                    elif ('hdmi-0' in desc or 'HDMI 0' in desc or 'HDMI0' in desc) and 'plughw:' in dev:
-                        if not 'plughw:CARD' in dev:
-                            self.vlc_devices['HDMI 0'] = dev
-                        
-                    elif ('hdmi-1' in desc or 'HDMI 1' in desc or 'HDMI1' in desc) and 'plughw:' in dev:
-                        if not 'plughw:CARD' in dev:
-                            self.vlc_devices['HDMI 1'] = dev
-                        
-                    elif 'luetooth' in desc:
-                        self.vlc_devices['Bluetooth speaker'] = dev
-                        
-                    elif index == 0 and ('hdmi' in desc or 'HDMI' in desc) and 'plughw:' in dev:
-                        if not 'plughw:CARD' in dev:
-                            self.vlc_devices['HDMI 0'] = dev
-                    else:
-                        if self.DEBUG:
-                            print("AUDIO OUTPUT OPTION FROM VLC FELL THROUGH: dev: ", dev,"  ,desc: ", desc)
-                    mod = mod.next
-                    index += 1
-                
-                #print("self.vlc_output_device_ids: " + str(self.vlc_output_device_ids))
-                if self.DEBUG:
-                    print("VLC audio output devices: " + str(self.vlc_devices))
             
             
         else:
@@ -231,7 +184,7 @@ class InternetRadioAdapter(Adapter):
                         else:
                             self.persistent_data['audio_output'] = ""
                 except:
-                    print("Error fixing audio output in persistent data")
+                    print("caught error fixing audio output in persistent data")
                 
                 try:
                     if 'stations' not in self.persistent_data:
@@ -239,15 +192,15 @@ class InternetRadioAdapter(Adapter):
                             print("stations was not in persistent data, adding it now.")
                         self.persistent_data['stations'] = []
                 except:
-                    print("Error fixing missing stations in persistent data")
+                    print("caught error fixing missing stations in persistent data")
                 
                 try:
                     if 'current_stream_url' not in self.persistent_data:
                         if self.DEBUG:
                             print("current_stream_url was not in persistent data, adding it now.")
-                        self.persistent_data['current_stream_url'] = 'http://direct.fipradio.fr/live/fip-midfi.mp3';
+                        self.persistent_data['current_stream_url'] = 'https://direct.fipradio.fr/live/fip-midfi.mp3'
                 except:
-                    print("Error fixing missing stations in persistent data")
+                    print("caught error fixing missing current_stream_url in persistent data")
                 
                 if self.DEBUG:
                     print("Persistence data was loaded succesfully.")
@@ -261,11 +214,11 @@ class InternetRadioAdapter(Adapter):
                 if len(self.audio_controls) > 0:
                     if 'human_device_name' in self.audio_controls[0]:
                         first_audio_output = self.audio_controls[0]['human_device_name']
-                self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output':  first_audio_output, 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
+                self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output':  first_audio_output, 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'},{'name':'Smooth Jazz','stream_url':'http://64.95.243.43:8002/stream'}] }
             
             except Exception as ex:
-                print("Error in handling missing persistent data file: " + str(ex))
-                self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output': "", 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'}] }
+                print("caught error in handling missing persistent data file: " + str(ex))
+                self.persistent_data = {'power':False,'station':'FIP','volume':100, 'audio_output': "", 'stations':[{'name':'FIP','stream_url':'http://direct.fipradio.fr/live/fip-midfi.mp3'},{'name':'Smooth Jazz','stream_url':'http://64.95.243.43:8002/stream'}] }
 
 
         if self.DEBUG:
@@ -359,7 +312,8 @@ class InternetRadioAdapter(Adapter):
 
         # Restore power
         try:
-            self.set_radio_state(bool(self.persistent_data['power']))
+            if bool(self.persistent_data['power']) == True:
+                self.set_radio_state(bool(self.persistent_data['power']))
         except Exception as ex:
             print("Error, could not restore radio station: " + str(ex))
 
@@ -493,11 +447,73 @@ class InternetRadioAdapter(Adapter):
                     print("self.persistent_data['stations'] was in config. It has not been moved to persistent data.")
 
         except Exception as ex:
-            print("Error in add_from_config: " + str(ex))
+            print("caught error in add_from_config: " + str(ex))
 
 
 
+    def ensure_vlc(self):
+        if self.DEBUG:
+            print("in ensure_vlc.  self.pipewire_enabled: ", self.pipewire_enabled)
+        if self.pipewire_enabled:
+            self.vlc_instance = vlc.Instance('--no-lua','--aout=pipewire','--vout=none')
+        else:
+            self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none')
+        
+        
+        #self.vlc_player = vlc.MediaPlayer()
+        self.vlc_player = self.vlc_instance.media_player_new()
+        #self.vlc_current_output = self.vlc_player.audio_output_device_get()
 
+        mods = self.vlc_player.audio_output_device_enum()
+        if self.DEBUG:
+            print(" internet radio debug: vlc_player mods: ", dir(mods.contents))
+        if mods:
+            index = 0
+            mod = mods
+            while mod:
+                mod = mod.contents
+                desc = mod.description.decode('utf-8', 'ignore')
+                dev = mod.device.decode('utf-8', 'ignore')
+                
+                dev = dev.replace('sysdefault:CARD=vc4hdmi0','plughw:0,0')
+                dev = dev.replace('sysdefault:CARD=vc4hdmi1','plughw:1,0')
+                
+                if self.DEBUG:
+                    print(f'index = {index}, desc = {desc}, device = {dev}')
+                
+                if desc == 'Default':
+                    self.vlc_devices['Automatic'] = dev
+                    
+                elif 'eadphone' in desc and 'sysdefault' in dev:
+                    self.vlc_devices['Headphone jack'] = dev
+                    
+                elif 'seeed-' in desc and 'plughw:' in dev:
+                    self.vlc_devices['ReSpeaker headphone jack'] = dev
+                    
+                elif ('hdmi-0' in desc or 'HDMI 0' in desc or 'HDMI0' in desc) and 'plughw:' in dev:
+                    if not 'plughw:CARD' in dev:
+                        self.vlc_devices['HDMI 0'] = dev
+                    
+                elif ('hdmi-1' in desc or 'HDMI 1' in desc or 'HDMI1' in desc) and 'plughw:' in dev:
+                    if not 'plughw:CARD' in dev:
+                        self.vlc_devices['HDMI 1'] = dev
+                    
+                elif 'luetooth' in desc:
+                    self.vlc_devices['Bluetooth speaker'] = dev
+                    
+                elif index == 0 and ('hdmi' in desc or 'HDMI' in desc) and 'plughw:' in dev:
+                    if not 'plughw:CARD' in dev:
+                        self.vlc_devices['HDMI 0'] = dev
+                else:
+                    if self.DEBUG:
+                        print("AUDIO OUTPUT OPTION FROM VLC FELL THROUGH: dev: ", dev,"  ,desc: ", desc)
+                mod = mod.next
+                index += 1
+            
+            #print("self.vlc_output_device_ids: " + str(self.vlc_output_device_ids))
+            if self.DEBUG:
+                print("VLC audio output devices: " + str(self.vlc_devices))
+        
 
 
         
@@ -553,7 +569,6 @@ class InternetRadioAdapter(Adapter):
                                         self.save_persistent_data()
                                         if not "Bluetooth speaker" in self.audio_output_options:
                                             self.audio_output_options.append( "Bluetooth speaker" )
-                                            
                                             
                                         if self.DEBUG:
                                             print("A Bluetooth speaker is connected")
@@ -835,6 +850,8 @@ class InternetRadioAdapter(Adapter):
                 
                 if self.use_vlc:
                     
+                    self.ensure_vlc()
+                    
                     if self.persistent_data['audio_output'] != self.previous_intended_audio_output or self.persistent_data['audio_output'] != self.actual_audio_output_device:
                         #self.vlc_player.stop()
                         
@@ -922,7 +939,8 @@ class InternetRadioAdapter(Adapter):
                         time.sleep(0.001)
                         volume = self.vlc_player.audio_get_volume()
                         if volume != -1:
-                            print("x: " + str(x) + ' volume: ' + str(volume))
+                            if self.DEBUG:
+                                print("vlc volume finally stuck at x: " + str(x) + ', volume: ' + str(volume))
                             break
                     
                     time.sleep(.03)
@@ -995,14 +1013,14 @@ class InternetRadioAdapter(Adapter):
                             
                             
                         elif sys.platform != 'darwin':
-                                for option in self.audio_controls:
+                            for option in self.audio_controls:
+                                if self.DEBUG:
+                                    print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
+                                if option['human_device_name'] == str(self.persistent_data['audio_output']):
                                     if self.DEBUG:
-                                        print( str(option['human_device_name']) + " =?= " + str(self.persistent_data['audio_output']) )
-                                    if option['human_device_name'] == str(self.persistent_data['audio_output']):
-                                        if self.DEBUG:
-                                            print("setting ALSA_CARD environment variable to: " + str(option['simple_card_name']))
-                                        environment["ALSA_CARD"] = str(option['simple_card_name'])
-                                    
+                                        print("setting ALSA_CARD environment variable to: " + str(option['simple_card_name']))
+                                    environment["ALSA_CARD"] = str(option['simple_card_name'])
+                                
                                     
                         # TODO: provide the option to fall back to normal speakers if the bluetooth speaker is disconnected?
                                     
@@ -1020,6 +1038,7 @@ class InternetRadioAdapter(Adapter):
                             if self.respeaker_detected == False:
                                 self.player.stdin.write(b'q')
                             self.player.terminate()
+                            time.sleep(.1)
                             self.player = None
                         except Exception as ex:
                             print("error terminating omxplayer with Q command. Maybe it stopped by itself?: " + str(ex))
@@ -1174,17 +1193,21 @@ class InternetRadioAdapter(Adapter):
                     
                     
                     if self.use_vlc:
+                        if self.vlc_player:
+                            try:
+                                self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                                self.vlc_media = vlc.Media( str(self.persistent_data['current_stream_url']) )
                     
-                        self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                        self.vlc_media = vlc.Media( str(self.persistent_data['current_stream_url']) )
-                    
-                        # setting media to the media player
-                        self.vlc_player.set_media( self.vlc_media )
+                                # setting media to the media player
+                                self.vlc_player.set_media( self.vlc_media )
 
-                        if self.DEBUG:
-                            print("turning off VLC")
-                        # start playing video
-                        self.vlc_player.stop()
+                                if self.DEBUG:
+                                    print("turning off VLC")
+                                # start playing video
+                                self.vlc_player.stop()
+                            except Exception as ex:
+                                print("caught error while trying to stop VLC playing")
+                            
                     
                     else:
                         if self.player != None:
@@ -1240,6 +1263,7 @@ class InternetRadioAdapter(Adapter):
         if self.use_vlc:
             if self.DEBUG:
                 print("setting VLC volume")
+            self.ensure_vlc()
             self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
         
         else:
@@ -1432,10 +1456,12 @@ class InternetRadioAdapter(Adapter):
             
             if str(selection) in self.vlc_devices.keys():  #self.vlc_ui_output_devices:
                 self.persistent_data['audio_output'] = str(selection)
-            else:
+            elif len(list(self.vlc_devices.keys())):
                 if self.DEBUG:
                     print("invalid audio output selection")
                 self.persistent_data['audio_output'] = list(self.vlc_devices.keys())[0]
+            else:
+                self.persistent_data['audio_output'] = None
                 
             if self.devices['internet-radio'] != None:
                 self.devices['internet-radio'].properties['audio output'].update( str(selection) )
@@ -1645,9 +1671,9 @@ class InternetRadioDevice(Device):
                             },
                             self.adapter.persistent_data['volume'])
                             
-            self.add_action("Lower volume", {});
+            self.add_action("Lower volume", {})
             
-            self.add_action("Raise volume", {});
+            self.add_action("Raise volume", {})
                             
             self.properties["status"] = InternetRadioProperty(
                             self,
@@ -1838,7 +1864,7 @@ class InternetRadioDevice(Device):
                         self.adapter.persistent_data['station'])
         
         #if call_handle_device_added:
-        self.adapter.handle_device_added(self);
+        self.adapter.handle_device_added(self)
         self.notify_property_changed(self.properties["station"])
 
 
@@ -1954,7 +1980,7 @@ def get_audio_controls():
             if human_device_name == 'MAI PCM i2s-hifi-0':
                 human_device_name = full_card_name + ' ' + human_device_name
             
-            #print("get_audio_controls: human_device_name: ", human_device_name);
+            #print("get_audio_controls: human_device_name: ", human_device_name)
             
             # Raspberry Pi 4
             human_device_name = human_device_name.replace("bcm2835 ALSA","Built-in headphone jack")
