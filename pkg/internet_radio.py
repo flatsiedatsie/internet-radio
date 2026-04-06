@@ -843,6 +843,9 @@ class InternetRadioAdapter(Adapter):
                 #        self.player.terminate()
                 #        self.player.kill()
 
+
+            
+
             #
             #  turn on
             #
@@ -914,58 +917,74 @@ class InternetRadioAdapter(Adapter):
                     #print("vola: " + str(self.vlc_player.audio_get_volume()))
                         
                     
-                    self.vlc_media = vlc.Media( str(self.persistent_data['current_stream_url']) )
                     
-                    #print("vol: " + str(self.vlc_player.audio_get_volume()))
-                    
-                    
-                    
-                    
-                    # setting media to the media player
-                    self.vlc_player.set_media( self.vlc_media )
-                    #self.vlc_player.parse()
-                    
-                    #print("vol3: " + str(self.vlc_player.audio_get_volume()))
-                    
-                    if self.DEBUG:
-                        print("turning on VLC")
-                    # start playing video
-                    self.vlc_player.play()
-                    #self.vlc_player.stop()
-                    
-                    for x in range(15000):
+                    try:
                         
-                        self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                        time.sleep(0.001)
-                        volume = self.vlc_player.audio_get_volume()
-                        if volume != -1:
+                        self.set_status_on_thing("Connecting")
+                        
+                        self.vlc_media = vlc.Media( str(self.persistent_data['current_stream_url']) )
+                    
+                        #print("vol: " + str(self.vlc_player.audio_get_volume()))
+                    
+                    
+                    
+                    
+                        # setting media to the media player
+                        self.vlc_player.set_media( self.vlc_media )
+                        #self.vlc_player.parse()
+                    
+                        #print("vol3: " + str(self.vlc_player.audio_get_volume()))
+                    
+                        if self.DEBUG:
+                            print("turning on VLC")
+                        # start playing video
+                        if self.vlc_player:
+                            self.vlc_player.play()
+                    
+                            for x in range(15000):
+                        
+                                self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                                time.sleep(0.001)
+                                volume = self.vlc_player.audio_get_volume()
+                                if volume != -1:
+                                    if self.DEBUG:
+                                        print("vlc volume finally stuck at x: " + str(x) + ', volume: ' + str(volume))
+                                    break
+                    
+                            time.sleep(.03)
+                            #print("volq: " + str(self.vlc_player.audio_get_volume()))
+                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                            #print("volq2: " + str(self.vlc_player.audio_get_volume()))
+                            time.sleep(.07)
+                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                            #self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
+                            #print("volc nu echt toch wel: " + str(self.vlc_player.audio_get_volume()))
+                            time.sleep(1)
+                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                            #print("volx: " + str(self.vlc_player.audio_get_volume()))
+                            time.sleep(1)
+                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                            #print("volx: " + str(self.vlc_player.audio_get_volume()))
+                            time.sleep(1)
+                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                            #print("volx3: " + str(self.vlc_player.audio_get_volume()))
+                            self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
+                    
                             if self.DEBUG:
-                                print("vlc volume finally stuck at x: " + str(x) + ', volume: ' + str(volume))
-                            break
+                                #print("audio_output_device_enum(): ", list(self.vlc_player.audio_output_device_enum()))
+                                print("audio_output_device_get(): " + str(self.vlc_player.audio_output_device_get()))
                     
-                    time.sleep(.03)
-                    #print("volq: " + str(self.vlc_player.audio_get_volume()))
-                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                    #print("volq2: " + str(self.vlc_player.audio_get_volume()))
-                    time.sleep(.07)
-                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                    #self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
-                    #print("volc nu echt toch wel: " + str(self.vlc_player.audio_get_volume()))
-                    time.sleep(1)
-                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                    #print("volx: " + str(self.vlc_player.audio_get_volume()))
-                    time.sleep(1)
-                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                    #print("volx: " + str(self.vlc_player.audio_get_volume()))
-                    time.sleep(1)
-                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                    #print("volx3: " + str(self.vlc_player.audio_get_volume()))
-                    self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
+                        else:
+                            if self.DEBUG:
+                                print("error, VLC was nully?")
+                        #self.vlc_player.stop()
+                        
+                    except Exception as ex:
+                        if self.DEBUG:
+                            print("caught error starting playing of VLC player: ", ex)
                     
                     
-                    if self.DEBUG:
-                        #print("audio_output_device_enum(): ", list(self.vlc_player.audio_output_device_enum()))
-                        print("audio_output_device_get(): " + str(self.vlc_player.audio_output_device_get()))
+                    
                     
                 
                 # NOT VLC
@@ -1026,7 +1045,7 @@ class InternetRadioAdapter(Adapter):
                                     
                     except Exception as ex:
                         if self.DEBUG:
-                            print("Error in set_radio_state while doing audio output (bluetooth speaker) checking: " + str(ex))
+                            print("caught error in set_radio_state while doing audio output (bluetooth speaker) checking: " + str(ex))
                 
                     
                     
@@ -1205,9 +1224,21 @@ class InternetRadioAdapter(Adapter):
                                     print("turning off VLC")
                                 # start playing video
                                 self.vlc_player.stop()
+                                time.sleep(.1)
+                                if self.DEBUG:
+                                     print("VLC should be stopped")
+                                #    #print("turned off VLC?  self.vlc_player.State ", self.vlc_player.State)
+                                #    print("turned off VLC?  self.vlc_instance.State ", self.vlc_instance.State)
+                                    
+                                
+                                # IDLE/CLOSE=0, OPENING=1, PLAYING=3, PAUSED=4, STOPPING=5, ENDED=6, ERROR=7.
+                                
+                                
                             except Exception as ex:
-                                print("caught error while trying to stop VLC playing")
-                            
+                                print("caught error while trying to stop VLC playing: ", ex)
+                        else:
+                            if self.DEBUG:
+                                print("cannot turn off VLC: self.vlc_player is nully: ", self.vlc_player)
                     
                     else:
                         if self.player != None:
@@ -1217,7 +1248,9 @@ class InternetRadioAdapter(Adapter):
                                 self.player.stdin.write(b'q')
                                 self.player.stdin.flush()
                             self.player.terminate()
+                            time.sleep(.2)
                             self.player.kill()
+                            time.sleep(.2)
                             #os.system('pkill ffplay')
                             if self.respeaker_detected:
                                 os.system('pkill ffplay')
