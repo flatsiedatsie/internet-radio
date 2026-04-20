@@ -1661,10 +1661,11 @@ class InternetRadioDevice(Device):
 
         self._id = 'internet-radio'
         self.id = 'internet-radio'
+        self.name = 'internet-radio'
         self.adapter = adapter
         self.DEBUG = adapter.DEBUG
 
-        self.name = 'Radio'
+        
         self.title = 'Radio'
         self.description = 'Listen to internet radio stations'
         self._type = ['MultiLevelSwitch']
