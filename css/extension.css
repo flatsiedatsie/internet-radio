@@ -499,9 +499,6 @@
     transition: width 1s linear;
 }
 
-.extension-internet-radio-preview[data-playing="false"]{
-}
-
 .extension-internet-radio-preview[data-playing="true"]{
     padding-left:4rem;
     background-color:orange;
@@ -656,8 +653,10 @@ body.zoom2 #extension-internet-radio-volume-up-button{
 }
 
 
-
-
+.extension-internet-radio-item-playing{
+	background: rgb(255, 0, 179);
+	background-image: repeating-radial-gradient(circle at 0 0, transparent 0, rgba(240, 240, 250, .3) 20px), repeating-linear-gradient(#444cf755, #444cf7);
+}
 
 .extension-internet-radio-item-playing .extension-internet-radio-play-icon{
     /*background-color:rgba(172,255,172,.5);*/

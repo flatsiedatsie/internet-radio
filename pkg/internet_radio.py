@@ -18,6 +18,9 @@ import os
 import re
 import sys
 
+os.environ["XDG_RUNTIME_DIR"] = "/run/user/1000"
+os.environ["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=/run/user/1000/bus"
+
 import vlc
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib'))
@@ -70,7 +73,7 @@ class InternetRadioAdapter(Adapter):
         self.name = self.__class__.__name__
         Adapter.__init__(self, self.addon_name, self.addon_name, verbose=verbose)
 
-
+        print(os.environ)
 
         # Setup persistence
         #for path in _CONFIG_PATHS:
@@ -120,14 +123,15 @@ class InternetRadioAdapter(Adapter):
         if vlc_check_output != None:
             if '/vlc' in vlc_check_output:
                 self.use_vlc = True
-            
+
        
-        self.vlc_devices = {}
+        print("self.use_vlc: ", self.use_vlc)
+
         self.vlc_instance = None
         if self.use_vlc:
             if self.DEBUG:
                 print("VLC detected")
-            
+            self.ensure_vlc()
             
         else:
             if self.DEBUG:
@@ -248,7 +252,7 @@ class InternetRadioAdapter(Adapter):
         # Start the API handler
         try:
             if self.DEBUG:
-                print("starting api handler")
+                print("debug: starting api handler")
             self.api_handler = InternetRadioAPIHandler(self, verbose=True)
             #self.manager_proxy.add_api_handler(self.extension)
             if self.DEBUG:
@@ -269,19 +273,19 @@ class InternetRadioAdapter(Adapter):
         
         #if self.DEBUG:
         if self.DEBUG:
-            print("complete legacy self.audio_output_options : " + str(self.audio_output_options))
+            print("debug: complete legacy self.audio_output_options : " + str(self.audio_output_options))
         
         # Create the radio device
         try:
             internet_radio_device = InternetRadioDevice(self, self.radio_stations_names_list, self.audio_output_options)
             self.handle_device_added(internet_radio_device)
             if self.DEBUG:
-                print("internet_radio_device created")
+                print("debug: internet_radio_device created")
             self.devices['internet-radio'].connected = True
             self.devices['internet-radio'].connected_notify(True)
 
         except Exception as ex:
-            print("Could not create internet_radio_device: " + str(ex))
+            print("caught error: could not create internet_radio_device: " + str(ex))
 
 
         self.player = None
@@ -353,7 +357,7 @@ class InternetRadioAdapter(Adapter):
                                 if bt_connected:
                                     if self.DEBUG:
                                         print("Reconnecting to Bluetooth speaker")
-                                        self.set_radio_state(self.persistent_data['power'],False)
+                                    self.set_radio_state(self.persistent_data['power'],False)
                                 else:
                                     if self.DEBUG:
                                         print('........still looking for Bluetooth speaker........')
@@ -456,6 +460,7 @@ class InternetRadioAdapter(Adapter):
             print("in ensure_vlc.  self.pipewire_enabled: ", self.pipewire_enabled)
         if self.pipewire_enabled:
             self.vlc_instance = vlc.Instance('--no-lua','--aout=pipewire','--vout=none')
+            #self.vlc_instance = vlc.Instance('--no-lua','--vout=none')
         else:
             self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none')
         
@@ -1765,7 +1770,7 @@ class InternetRadioDevice(Device):
                         
                         audio_output_list = list(self.adapter.vlc_devices.keys())
                         if self.DEBUG:
-                            print("thing: new VLC audio_output_list : " + str(audio_output_list))
+                            print("thing: new VLC audio_output_list: " + str(audio_output_list))
                         if len(audio_output_list):
                             if selected_output == None or selected_output == "" or selected_output not in audio_output_list:
                                 #if self.DEBUG:
