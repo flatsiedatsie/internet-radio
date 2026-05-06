@@ -73,7 +73,7 @@ class InternetRadioAdapter(Adapter):
         self.name = self.__class__.__name__
         Adapter.__init__(self, self.addon_name, self.addon_name, verbose=verbose)
 
-        print(os.environ)
+        #print(os.environ)
 
         # Setup persistence
         #for path in _CONFIG_PATHS:
