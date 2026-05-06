@@ -458,67 +458,85 @@ class InternetRadioAdapter(Adapter):
     def ensure_vlc(self):
         if self.DEBUG:
             print("in ensure_vlc.  self.pipewire_enabled: ", self.pipewire_enabled)
-        if self.pipewire_enabled:
-            self.vlc_instance = vlc.Instance('--no-lua','--aout=pipewire','--vout=none')
-            #self.vlc_instance = vlc.Instance('--no-lua','--vout=none')
-        else:
-            self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none')
-        
-        
-        #self.vlc_player = vlc.MediaPlayer()
-        self.vlc_player = self.vlc_instance.media_player_new()
-        #self.vlc_current_output = self.vlc_player.audio_output_device_get()
 
-        mods = self.vlc_player.audio_output_device_enum()
-        if self.DEBUG:
-            print(" internet radio debug: vlc_player mods: ", dir(mods.contents))
-        if mods:
-            index = 0
-            mod = mods
-            while mod:
-                mod = mod.contents
-                desc = mod.description.decode('utf-8', 'ignore')
-                dev = mod.device.decode('utf-8', 'ignore')
-                
-                dev = dev.replace('sysdefault:CARD=vc4hdmi0','plughw:0,0')
-                dev = dev.replace('sysdefault:CARD=vc4hdmi1','plughw:1,0')
-                
-                if self.DEBUG:
-                    print(f'index = {index}, desc = {desc}, device = {dev}')
-                
-                if desc == 'Default':
-                    self.vlc_devices['Automatic'] = dev
-                    
-                elif 'eadphone' in desc and 'sysdefault' in dev:
-                    self.vlc_devices['Headphone jack'] = dev
-                    
-                elif 'seeed-' in desc and 'plughw:' in dev:
-                    self.vlc_devices['ReSpeaker headphone jack'] = dev
-                    
-                elif ('hdmi-0' in desc or 'HDMI 0' in desc or 'HDMI0' in desc) and 'plughw:' in dev:
-                    if not 'plughw:CARD' in dev:
-                        self.vlc_devices['HDMI 0'] = dev
-                    
-                elif ('hdmi-1' in desc or 'HDMI 1' in desc or 'HDMI1' in desc) and 'plughw:' in dev:
-                    if not 'plughw:CARD' in dev:
-                        self.vlc_devices['HDMI 1'] = dev
-                    
-                elif 'luetooth' in desc:
-                    self.vlc_devices['Bluetooth speaker'] = dev
-                    
-                elif index == 0 and ('hdmi' in desc or 'HDMI' in desc) and 'plughw:' in dev:
-                    if not 'plughw:CARD' in dev:
-                        self.vlc_devices['HDMI 0'] = dev
-                else:
-                    if self.DEBUG:
-                        print("AUDIO OUTPUT OPTION FROM VLC FELL THROUGH: dev: ", dev,"  ,desc: ", desc)
-                mod = mod.next
-                index += 1
+        if self.vlc_player == None:
+            if self.pipewire_enabled:
+                #self.vlc_instance = vlc.Instance('--no-lua','--aout=pipewire','--vout=none')
+                self.vlc_instance = vlc.Instance('--no-lua','--vout=none')
+            else:
+                self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none')
+            #self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none')
             
-            #print("self.vlc_output_device_ids: " + str(self.vlc_output_device_ids))
+            #self.vlc_player = vlc.MediaPlayer()
+            self.vlc_player = self.vlc_instance.media_player_new()
+            #self.vlc_current_output = self.vlc_player.audio_output_device_get()
+
+            mods = self.vlc_player.audio_output_device_enum()
             if self.DEBUG:
-                print("VLC audio output devices: " + str(self.vlc_devices))
-        
+                print(" internet radio debug: ensure_vlc: vlc_player mods: ", dir(mods.contents))
+            if mods:
+                index = 0
+                mod = mods
+                while mod:
+                    mod = mod.contents
+                    desc = mod.description.decode('utf-8', 'ignore')
+                    dev = mod.device.decode('utf-8', 'ignore')
+                    
+                    dev = dev.replace('sysdefault:CARD=vc4hdmi0','plughw:0,0')
+                    dev = dev.replace('sysdefault:CARD=vc4hdmi1','plughw:1,0')
+                    
+                    if self.DEBUG:
+                        print(f'index = {index}, desc = {desc}, device = {dev}')
+                    
+                    if desc.lower() == 'default':
+                        self.vlc_devices['Automatic'] = dev
+
+                    #elif 'All outputs' in desc and self.pipewire_enabled:
+                    #    self.vlc_devices['All outputs'] = dev
+
+                    #elif 'Built-in' in desc and '(HDMI)' in desc and self.pipewire_enabled:
+                    #    self.vlc_devices['HDMI'] = dev
+
+                    #elif 'USB' in desc and self.pipewire_enabled:
+                    #    self.vlc_devices['USB'] = dev
+
+                    elif dev == 'default' and self.pipewire_enabled:
+                        self.vlc_devices['Default'] = dev
+
+                    elif dev == 'pipewire' and self.pipewire_enabled:
+                        self.vlc_devices['Pipewire'] = dev
+
+
+                    elif 'eadphone' in desc and 'sysdefault' in dev:
+                        self.vlc_devices['Headphone jack'] = dev
+                        
+                    elif 'seeed-' in desc and 'plughw:' in dev:
+                        self.vlc_devices['ReSpeaker headphone jack'] = dev
+                        
+                    elif ('hdmi-0' in desc or 'HDMI 0' in desc or 'HDMI0' in desc) and 'plughw:' in dev:
+                        if not 'plughw:CARD' in dev:
+                            self.vlc_devices['HDMI 0'] = dev
+                        
+                    elif ('hdmi-1' in desc or 'HDMI 1' in desc or 'HDMI1' in desc) and 'plughw:' in dev:
+                        if not 'plughw:CARD' in dev:
+                            self.vlc_devices['HDMI 1'] = dev
+                        
+                    elif 'luetooth' in desc:
+                        self.vlc_devices['Bluetooth speaker'] = dev
+                        
+                    elif index == 0 and ('hdmi' in desc or 'HDMI' in desc) and 'plughw:' in dev:
+                        if not 'plughw:CARD' in dev:
+                            self.vlc_devices['HDMI 0'] = dev
+                    else:
+                        if self.DEBUG:
+                            print("ensure_vlc: AUDIO OUTPUT OPTION FROM VLC FELL THROUGH: dev: ", dev,"  ,desc: ", desc)
+                    mod = mod.next
+                    index += 1
+                
+                #print("self.vlc_output_device_ids: " + str(self.vlc_output_device_ids))
+                if self.DEBUG:
+                    print("ensure_vlc: VLC audio output devices: " + str(self.vlc_devices))
+            
 
 
         
@@ -929,9 +947,7 @@ class InternetRadioAdapter(Adapter):
                         
                         self.vlc_media = vlc.Media( str(self.persistent_data['current_stream_url']) )
                     
-                        #print("vol: " + str(self.vlc_player.audio_get_volume()))
-                    
-                    
+                        print("vlc_player.audio_get_volume: " + str(self.vlc_player.audio_get_volume()))
                     
                     
                         # setting media to the media player
@@ -941,38 +957,42 @@ class InternetRadioAdapter(Adapter):
                         #print("vol3: " + str(self.vlc_player.audio_get_volume()))
                     
                         if self.DEBUG:
-                            print("turning on VLC")
+                            print("turning on VLC.  self.persistent_data['volume']: ", self.persistent_data['volume'])
                         # start playing video
                         if self.vlc_player:
                             self.vlc_player.play()
-                    
-                            for x in range(15000):
+                            if self.DEBUG:
+                                print("called self.vlc_player.play()")
+                            if isinstance(self.persistent_data['volume'],(int,float)):
+                                for x in range(1500):
+
+                                    self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                                    time.sleep(0.001)
+                                    volume = self.vlc_player.audio_get_volume()
+                                    if volume != -1:
+                                        if self.DEBUG:
+                                            print("vlc volume finally stuck at x: " + str(x) + ', volume: ' + str(volume))
+                                        break
                         
+                                time.sleep(.03)
+                                #print("volq: " + str(self.vlc_player.audio_get_volume()))
                                 self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                                time.sleep(0.001)
-                                volume = self.vlc_player.audio_get_volume()
-                                if volume != -1:
-                                    if self.DEBUG:
-                                        print("vlc volume finally stuck at x: " + str(x) + ', volume: ' + str(volume))
-                                    break
-                    
-                            time.sleep(.03)
-                            #print("volq: " + str(self.vlc_player.audio_get_volume()))
-                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
-                            #print("volq2: " + str(self.vlc_player.audio_get_volume()))
-                            time.sleep(.07)
-                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                                #print("volq2: " + str(self.vlc_player.audio_get_volume()))
+                                time.sleep(.07)
+                                self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
                             #self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
                             #print("volc nu echt toch wel: " + str(self.vlc_player.audio_get_volume()))
-                            time.sleep(1)
-                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                            #time.sleep(1)
+                            #self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
                             #print("volx: " + str(self.vlc_player.audio_get_volume()))
-                            time.sleep(1)
-                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                            #time.sleep(1)
+                            #self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
                             #print("volx: " + str(self.vlc_player.audio_get_volume()))
-                            time.sleep(1)
-                            self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
+                            #time.sleep(1)
+                            #self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
                             #print("volx3: " + str(self.vlc_player.audio_get_volume()))
+                            if self.DEBUG:
+                                print("calling self.vlc_player.audio_output_device_set with self.actual_audio_output_device: ", self.actual_audio_output_device)
                             self.vlc_player.audio_output_device_set(None, self.actual_audio_output_device)
                     
                             if self.DEBUG:
@@ -1228,8 +1248,10 @@ class InternetRadioAdapter(Adapter):
                                 if self.DEBUG:
                                     print("turning off VLC")
                                 # start playing video
+                                time.sleep(.1)
                                 self.vlc_player.stop()
                                 time.sleep(.1)
+                                self.vlc_player.stop()
                                 if self.DEBUG:
                                      print("VLC should be stopped")
                                 #    #print("turned off VLC?  self.vlc_player.State ", self.vlc_player.State)
@@ -1284,7 +1306,6 @@ class InternetRadioAdapter(Adapter):
     def set_audio_volume(self,volume):
         if self.DEBUG:
             print("Setting audio output volume to " + str(volume))
-            print("self.player: " + str(self.player))
         
         set_volume_via_radio_state = False   
         
@@ -1300,7 +1321,7 @@ class InternetRadioAdapter(Adapter):
                 
         if self.use_vlc:
             if self.DEBUG:
-                print("setting VLC volume")
+                print("setting VLC volume. self.vlc_player: " + str(self.vlc_player))
             self.ensure_vlc()
             self.vlc_player.audio_set_volume( self.persistent_data['volume'] )
         
@@ -1487,8 +1508,6 @@ class InternetRadioAdapter(Adapter):
     def set_audio_output(self, selection):
         if self.DEBUG:
             print("Setting audio output selection to: " + str(selection))
-            
-            
             
         if self.use_vlc:
             
@@ -1769,6 +1788,9 @@ class InternetRadioDevice(Device):
                             print("thing: using VLC audio output list for audio output property")
                         
                         audio_output_list = list(self.adapter.vlc_devices.keys())
+                        if self.adapter.pipewire_enabled:
+                            audio_output_list = self.adapter.audio_output_options
+
                         if self.DEBUG:
                             print("thing: new VLC audio_output_list: " + str(audio_output_list))
                         if len(audio_output_list):
