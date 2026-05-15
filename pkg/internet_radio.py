@@ -461,10 +461,10 @@ class InternetRadioAdapter(Adapter):
 
         if self.vlc_player == None:
             if self.pipewire_enabled:
-                #self.vlc_instance = vlc.Instance('--no-lua','--aout=pipewire','--vout=none')
-                self.vlc_instance = vlc.Instance('--no-lua','--vout=none')
+                self.vlc_instance = vlc.Instance('--no-lua','--aout=pipewire','--vout=none','--file-caching=3000')
+                #self.vlc_instance = vlc.Instance('--no-lua','--vout=none','--file-caching=3000' )
             else:
-                self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none')
+                self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none','--file-caching=3000')
             #self.vlc_instance = vlc.Instance('--no-lua','--aout=alsa','--vout=none')
             
             #self.vlc_player = vlc.MediaPlayer()
@@ -696,7 +696,7 @@ class InternetRadioAdapter(Adapter):
 
                 if stream_title:
                     if self.DEBUG:
-                        print("stream title: " + str(stream_title))
+                        print("debug: stream title: " + str(stream_title))
                     stream_title = stream_title.group(1).decode(encoding, errors='replace')
 
                     if info != stream_title:
